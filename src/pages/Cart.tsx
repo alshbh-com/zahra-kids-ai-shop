@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,17 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
-
-interface CartItem {
-  id: string;
-  product: any;
-  quantity: number;
-  size?: string;
-  color?: string;
-}
+import { useCart } from "@/contexts/CartContext";
 
 const Cart = () => {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount } = useCart();
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
@@ -25,26 +18,6 @@ const Cart = () => {
   const [notes, setNotes] = useState("");
 
   const queryClient = useQueryClient();
-
-  const updateQuantity = (itemId: string, change: number) => {
-    setCart(cart.map(item => {
-      if (item.id === itemId) {
-        const newQuantity = Math.max(1, item.quantity + change);
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
-    }));
-  };
-
-  const removeItem = (itemId: string) => {
-    setCart(cart.filter(item => item.id !== itemId));
-    toast.success("تم حذف المنتج من السلة");
-  };
-
-  const totalAmount = cart.reduce((sum, item) => {
-    const price = item.product.discount_price || item.product.price;
-    return sum + (price * item.quantity);
-  }, 0);
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
@@ -72,11 +45,9 @@ ${customerEmail ? `البريد: ${customerEmail}` : ''}
 
 🛒 *تفاصيل الطلب:*
 ${cart.map(item => `
-• ${item.product.name_ar}
+• ${item.name_ar}
   الكمية: ${item.quantity}
-  ${item.size ? `المقاس: ${item.size}` : ''}
-  ${item.color ? `اللون: ${item.color}` : ''}
-  السعر: ${(item.product.discount_price || item.product.price) * item.quantity} جنيه
+  السعر: ${(item.discount_price || item.price) * item.quantity} جنيه
 `).join('\n')}
 
 💰 *الإجمالي: ${totalAmount} جنيه*
@@ -88,7 +59,7 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
       window.open(whatsappUrl, '_blank');
 
       // Clear cart and form
-      setCart([]);
+      clearCart();
       setCustomerName("");
       setCustomerPhone("");
       setCustomerAddress("");
@@ -122,12 +93,10 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
       customer_email: customerEmail || null,
       notes: notes || null,
       items: cart.map(item => ({
-        product_id: item.product.id,
-        product_name: item.product.name_ar,
+        product_id: item.id,
+        product_name: item.name_ar,
         quantity: item.quantity,
-        price: item.product.discount_price || item.product.price,
-        size: item.size,
-        color: item.color,
+        price: item.discount_price || item.price,
       })),
       total_amount: totalAmount,
       status: "pending",
@@ -161,22 +130,20 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
                   <CardContent className="p-4">
                     <div className="flex gap-4">
                       <img
-                        src={item.product.product_images?.[0]?.image_url || "/placeholder.svg"}
-                        alt={item.product.name_ar}
+                        src={item.image_url || "/placeholder.svg"}
+                        alt={item.name_ar}
                         className="w-24 h-24 object-cover rounded-lg"
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{item.product.name_ar}</h3>
-                        <p className="text-sm text-muted-foreground">{item.product.name_en}</p>
-                        {item.size && <p className="text-sm">المقاس: {item.size}</p>}
-                        {item.color && <p className="text-sm">اللون: {item.color}</p>}
+                        <h3 className="font-semibold text-lg">{item.name_ar}</h3>
+                        <p className="text-sm text-muted-foreground">{item.name_en}</p>
                         <div className="flex items-center gap-4 mt-3">
                           <div className="flex items-center gap-2 border rounded-lg p-1">
                             <Button
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8"
-                              onClick={() => updateQuantity(item.id, -1)}
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
@@ -185,19 +152,19 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
                               size="icon"
                               variant="ghost"
                               className="h-8 w-8"
-                              onClick={() => updateQuantity(item.id, 1)}
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
                           </div>
                           <span className="font-bold text-lg text-primary">
-                            {((item.product.discount_price || item.product.price) * item.quantity).toFixed(2)} جنيه
+                            {((item.discount_price || item.price) * item.quantity).toFixed(2)} جنيه
                           </span>
                           <Button
                             size="icon"
                             variant="destructive"
                             className="mr-auto"
-                            onClick={() => removeItem(item.id)}
+                            onClick={() => removeFromCart(item.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

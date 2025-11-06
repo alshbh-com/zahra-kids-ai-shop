@@ -3,12 +3,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Star, Share2 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useCart } from "@/contexts/CartContext";
 
 interface ProductCardProps {
   product: any;
 }
 
 export const ProductCard = ({ product }: ProductCardProps) => {
+  const navigate = useNavigate();
+  const { addToCart } = useCart();
+  
   const hasDiscount = product.discount_price && product.discount_price < product.price;
   const discountPercentage = hasDiscount
     ? Math.round(((product.price - product.discount_price) / product.price) * 100)
@@ -21,8 +26,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   return (
-    <Card className="group overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4">
-      <div className="relative overflow-hidden">
+    <Card className="group overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer">
+      <div className="relative overflow-hidden" onClick={() => navigate(`/product/${product.id}`)}>
         {hasDiscount && (
           <Badge className="absolute top-2 right-2 z-10 bg-gradient-to-r from-accent to-destructive border-0">
             خصم {discountPercentage}%
@@ -71,10 +76,25 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         )}
 
         <div className="flex gap-2">
-          <Button className="flex-1" size="sm">
-            أضف للسلة
+          <Button 
+            className="flex-1" 
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              addToCart(product);
+            }}
+            disabled={product.stock_quantity === 0}
+          >
+            {product.stock_quantity === 0 ? 'نفذت الكمية' : 'أضف للسلة'}
           </Button>
-          <Button size="sm" variant="outline" onClick={handleShare}>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShare();
+            }}
+          >
             <Share2 className="w-4 h-4" />
           </Button>
         </div>
