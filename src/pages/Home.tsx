@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
 import { OfferBanner } from "@/components/OfferBanner";
-import { SeasonalSection } from "@/components/SeasonalSection";
 import { AiChatAssistant } from "@/components/AiChatAssistant";
 import { SearchBar } from "@/components/SearchBar";
 import logo from "@/assets/logo.jpg";
@@ -74,9 +73,6 @@ const Home = () => {
             </div>
           </div>
         )}
-
-        {/* Seasonal Collections */}
-        <SeasonalSection />
 
         {/* Products Grid */}
         <div className="space-y-6">

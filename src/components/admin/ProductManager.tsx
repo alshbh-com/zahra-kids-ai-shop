@@ -106,14 +106,14 @@ export const ProductManager = () => {
   });
 
   const handleSubmit = () => {
-    if (!formData.name_ar || !formData.name_en || !formData.price) {
-      toast.error("برجاء ملء جميع الحقول المطلوبة");
+    if (!formData.name_ar || !formData.price) {
+      toast.error("برجاء ملء الاسم بالعربي والسعر");
       return;
     }
 
     addProductMutation.mutate({
       name_ar: formData.name_ar,
-      name_en: formData.name_en,
+      name_en: formData.name_en || formData.name_ar,
       description_ar: formData.description_ar || null,
       description_en: formData.description_en || null,
       price: parseFloat(formData.price),
@@ -155,11 +155,11 @@ export const ProductManager = () => {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">الاسم بالإنجليزي *</label>
+                <label className="text-sm font-medium">الاسم بالإنجليزي</label>
                 <Input
                   value={formData.name_en}
                   onChange={(e) => setFormData({ ...formData, name_en: e.target.value })}
-                  placeholder="Kids Dress"
+                  placeholder="Kids Dress (اختياري)"
                 />
               </div>
             </div>
