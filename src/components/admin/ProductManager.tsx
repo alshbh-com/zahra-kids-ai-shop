@@ -106,7 +106,7 @@ export const ProductManager = () => {
   });
 
   const handleSubmit = () => {
-    if (!formData.name_ar || !formData.name_en || !formData.price || !formData.category_id) {
+    if (!formData.name_ar || !formData.name_en || !formData.price) {
       toast.error("برجاء ملء جميع الحقول المطلوبة");
       return;
     }
@@ -118,7 +118,7 @@ export const ProductManager = () => {
       description_en: formData.description_en || null,
       price: parseFloat(formData.price),
       discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
-      category_id: formData.category_id,
+      category_id: formData.category_id || null,
       stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
     });
   };
@@ -214,7 +214,7 @@ export const ProductManager = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium">الفئة *</label>
+              <label className="text-sm font-medium">الفئة (اختياري)</label>
               <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="اختر الفئة" />

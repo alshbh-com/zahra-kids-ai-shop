@@ -17,7 +17,7 @@ export const AiChatAssistant = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "مرحباً! كيف أساعدك؟",
+      content: "أهلاً! ابحث عن إيه؟",
     },
   ]);
   const [input, setInput] = useState("");
