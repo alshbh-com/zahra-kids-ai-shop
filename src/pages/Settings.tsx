@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock, Settings as SettingsIcon } from "lucide-react";
 import { AdminDashboard } from "@/components/AdminDashboard";
+import { SocialLinks } from "@/components/SocialLinks";
 import { toast } from "sonner";
 
 const Settings = () => {
@@ -83,7 +84,14 @@ const Settings = () => {
           <h1 className="text-3xl font-bold">لوحة التحكم</h1>
         </div>
 
-        <AdminDashboard />
+        <div className="grid lg:grid-cols-3 gap-6 mb-6">
+          <div className="lg:col-span-2">
+            <AdminDashboard />
+          </div>
+          <div className="space-y-6">
+            <SocialLinks />
+          </div>
+        </div>
       </div>
     </div>
   );

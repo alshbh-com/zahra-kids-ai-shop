@@ -4,10 +4,47 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
+
+const shippingPrices: Record<string, number> = {
+  "القاهرة": 55,
+  "الجيزة": 55,
+  "القليوبية": 60,
+  "الغربية": 65,
+  "المنوفية": 65,
+  "كفر الشيخ": 65,
+  "الإسكندرية": 65,
+  "الدقهلية": 65,
+  "المنصورة": 65,
+  "أجا": 65,
+  "السنبلاوين": 65,
+  "دمياط": 65,
+  "الشرقية": 65,
+  "بورسعيد": 65,
+  "الإسماعيلية": 65,
+  "السويس": 65,
+  "الفيوم": 65,
+  "البحيرة": 75,
+  "بني سويف": 70,
+  "المنيا": 70,
+  "مرسى مطروح": 80,
+  "البحر الأحمر": 85,
+  "سوهاج": 70,
+  "أسيوط": 70,
+  "قنا": 70,
+  "الغردقة": 85,
+  "الأقصر": 70,
+  "أسوان": 70,
+  "الوادي الجديد": 85,
+  "شمال سيناء": 100,
+  "جنوب سيناء": 100,
+  "الساحل الشمالي": 85,
+  "برج العرب": 70,
+};
 
 const Cart = () => {
   const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount } = useCart();
@@ -16,6 +53,10 @@ const Cart = () => {
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [notes, setNotes] = useState("");
+  const [selectedGovernorate, setSelectedGovernorate] = useState("");
+
+  const shippingCost = selectedGovernorate ? shippingPrices[selectedGovernorate] || 0 : 0;
+  const finalTotal = totalAmount + shippingCost;
 
   const queryClient = useQueryClient();
 
@@ -42,6 +83,7 @@ const Cart = () => {
 الهاتف: ${customerPhone}
 ${customerEmail ? `البريد: ${customerEmail}` : ''}
 العنوان: ${customerAddress}
+المحافظة: ${selectedGovernorate}
 
 🛒 *تفاصيل الطلب:*
 ${cart.map(item => `
@@ -50,7 +92,9 @@ ${cart.map(item => `
   السعر: ${(item.discount_price || item.price) * item.quantity} جنيه
 `).join('\n')}
 
-💰 *الإجمالي: ${totalAmount} جنيه*
+💰 *المبلغ الإجمالي للمنتجات: ${totalAmount} جنيه*
+🚚 *تكلفة الشحن: ${shippingCost} جنيه*
+💵 *الإجمالي الكلي: ${finalTotal} جنيه*
 
 ${notes ? `📝 ملاحظات: ${notes}` : ''}
       `.trim();
@@ -65,6 +109,7 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
       setCustomerAddress("");
       setCustomerEmail("");
       setNotes("");
+      setSelectedGovernorate("");
 
       toast.success("تم إرسال طلبك بنجاح! ✅");
       queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -76,8 +121,8 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
   });
 
   const handleSubmitOrder = () => {
-    if (!customerName || !customerPhone || !customerAddress) {
-      toast.error("برجاء ملء جميع البيانات المطلوبة");
+    if (!customerName || !customerPhone || !customerAddress || !selectedGovernorate) {
+      toast.error("برجاء ملء جميع البيانات المطلوبة بما في ذلك المحافظة");
       return;
     }
 
@@ -98,7 +143,7 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
         quantity: item.quantity,
         price: item.discount_price || item.price,
       })),
-      total_amount: totalAmount,
+      total_amount: finalTotal,
       status: "pending",
     };
 
@@ -213,6 +258,21 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
                   />
                 </div>
                 <div>
+                  <label className="text-sm font-medium">المحافظة *</label>
+                  <Select value={selectedGovernorate} onValueChange={setSelectedGovernorate}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="اختر المحافظة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(shippingPrices).sort().map((gov) => (
+                        <SelectItem key={gov} value={gov}>
+                          {gov} - {shippingPrices[gov]} جنيه
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <label className="text-sm font-medium">العنوان *</label>
                   <Textarea
                     value={customerAddress}
@@ -234,9 +294,21 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
                 </div>
 
                 <div className="pt-4 border-t">
-                  <div className="flex justify-between text-lg font-bold mb-4">
-                    <span>الإجمالي:</span>
-                    <span className="text-primary">{totalAmount.toFixed(2)} جنيه</span>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between text-base">
+                      <span>المنتجات:</span>
+                      <span>{totalAmount.toFixed(2)} جنيه</span>
+                    </div>
+                    {shippingCost > 0 && (
+                      <div className="flex justify-between text-base text-primary">
+                        <span>الشحن ({selectedGovernorate}):</span>
+                        <span>{shippingCost} جنيه</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-lg font-bold border-t pt-2">
+                      <span>الإجمالي الكلي:</span>
+                      <span className="text-primary">{finalTotal.toFixed(2)} جنيه</span>
+                    </div>
                   </div>
                   <Button
                     className="w-full text-lg py-6"

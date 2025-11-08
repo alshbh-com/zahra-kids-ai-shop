@@ -4,7 +4,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { OfferBanner } from "@/components/OfferBanner";
 import { AiChatAssistant } from "@/components/AiChatAssistant";
 import { SearchBar } from "@/components/SearchBar";
-import logo from "@/assets/logo.jpg";
+import logo from "@/assets/logo.png";
 
 const Home = () => {
   const { data: products } = useQuery({

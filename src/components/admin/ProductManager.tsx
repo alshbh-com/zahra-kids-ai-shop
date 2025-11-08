@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 export const ProductManager = () => {
   const [isAdding, setIsAdding] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
   const [formData, setFormData] = useState({
     name_ar: "",
     name_en: "",
@@ -111,15 +112,90 @@ export const ProductManager = () => {
       return;
     }
 
-    addProductMutation.mutate({
-      name_ar: formData.name_ar,
-      name_en: formData.name_en || formData.name_ar,
-      description_ar: formData.description_ar || null,
-      description_en: formData.description_en || null,
-      price: parseFloat(formData.price),
-      discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
-      category_id: formData.category_id || null,
-      stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
+    if (editingProduct) {
+      updateProductMutation.mutate({
+        id: editingProduct.id,
+        ...formData,
+        price: parseFloat(formData.price),
+        discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
+        stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
+      });
+    } else {
+      addProductMutation.mutate({
+        name_ar: formData.name_ar,
+        name_en: formData.name_en || formData.name_ar,
+        description_ar: formData.description_ar || null,
+        description_en: formData.description_en || null,
+        price: parseFloat(formData.price),
+        discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
+        category_id: formData.category_id || null,
+        stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
+      });
+    }
+  };
+
+  const updateProductMutation = useMutation({
+    mutationFn: async (productData: any) => {
+      const { id, ...updateData } = productData;
+      const { data, error } = await supabase
+        .from("products")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("تم تحديث المنتج بنجاح!");
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      setEditingProduct(null);
+      setIsAdding(false);
+      setFormData({
+        name_ar: "",
+        name_en: "",
+        description_ar: "",
+        description_en: "",
+        price: "",
+        discount_price: "",
+        category_id: "",
+        stock_quantity: "",
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating product:", error);
+      toast.error("حدث خطأ في تحديث المنتج");
+    },
+  });
+
+  const handleEdit = (product: any) => {
+    setEditingProduct(product);
+    setIsAdding(true);
+    setFormData({
+      name_ar: product.name_ar || "",
+      name_en: product.name_en || "",
+      description_ar: product.description_ar || "",
+      description_en: product.description_en || "",
+      price: product.price?.toString() || "",
+      discount_price: product.discount_price?.toString() || "",
+      category_id: product.category_id || "",
+      stock_quantity: product.stock_quantity?.toString() || "",
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null);
+    setIsAdding(false);
+    setFormData({
+      name_ar: "",
+      name_en: "",
+      description_ar: "",
+      description_en: "",
+      price: "",
+      discount_price: "",
+      category_id: "",
+      stock_quantity: "",
     });
   };
 
@@ -133,16 +209,23 @@ export const ProductManager = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
-        <Button onClick={() => setIsAdding(!isAdding)}>
+        <Button onClick={() => { 
+          if (isAdding && !editingProduct) {
+            setIsAdding(false);
+          } else {
+            handleCancelEdit();
+            setIsAdding(!isAdding);
+          }
+        }}>
           <Plus className="w-4 h-4 ml-2" />
-          إضافة منتج
+          {isAdding ? "إلغاء" : "إضافة منتج"}
         </Button>
       </div>
 
       {isAdding && (
         <Card>
           <CardHeader>
-            <CardTitle>منتج جديد</CardTitle>
+            <CardTitle>{editingProduct ? "تعديل المنتج" : "منتج جديد"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
@@ -274,6 +357,15 @@ export const ProductManager = () => {
               <h3 className="font-semibold">{product.name_ar}</h3>
               <p className="text-sm text-muted-foreground">{product.name_en}</p>
               <p className="text-lg font-bold text-primary mt-2">{product.price} جنيه</p>
+              <p className="text-sm text-muted-foreground">المخزن: {product.stock_quantity}</p>
+              <Button
+                onClick={() => handleEdit(product)}
+                className="w-full mt-3"
+                variant="outline"
+                size="sm"
+              >
+                تعديل المنتج
+              </Button>
             </CardContent>
           </Card>
         ))}

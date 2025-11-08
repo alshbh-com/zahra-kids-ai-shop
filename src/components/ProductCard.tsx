@@ -1,10 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Share2 } from "lucide-react";
+import { Star, Share2, Eye, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
+import { useState, useEffect } from "react";
 
 interface ProductCardProps {
   product: any;
@@ -18,6 +19,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const discountPercentage = hasDiscount
     ? Math.round(((product.price - product.discount_price) / product.price) * 100)
     : 0;
+
+  // أعداد وهمية للمشاهدين (عشوائية بين 300-800)
+  const [viewersCount] = useState(Math.floor(Math.random() * (800 - 300 + 1)) + 300);
 
   const handleShare = () => {
     const productUrl = `${window.location.origin}/product/${product.id}`;
@@ -50,6 +54,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <p className="text-sm text-muted-foreground line-clamp-1">{product.name_en}</p>
         </div>
 
+        {/* عدد المشاهدين */}
+        <div className="flex items-center gap-2 text-sm">
+          <Eye className="w-4 h-4 text-primary" />
+          <span className="font-medium text-primary">{viewersCount}</span>
+          <span className="text-muted-foreground">يشاهدون الآن</span>
+          <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+        </div>
+
         {product.rating > 0 && (
           <div className="flex items-center gap-1">
             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
@@ -70,8 +82,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </div>
 
         {product.stock_quantity <= product.low_stock_threshold && product.stock_quantity > 0 && (
-          <Badge variant="outline" className="text-xs">
-            الكمية محدودة!
+          <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-600 border-orange-500">
+            <Flame className="w-3 h-3 ml-1 animate-pulse" />
+            الكمية محدودة - اسرع للشراء!
           </Badge>
         )}
 

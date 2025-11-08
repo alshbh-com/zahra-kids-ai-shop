@@ -1,7 +1,9 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Clock, ShoppingCart } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface OfferBannerProps {
   offer: any;
@@ -9,6 +11,7 @@ interface OfferBannerProps {
 
 export const OfferBanner = ({ offer }: OfferBannerProps) => {
   const [timeLeft, setTimeLeft] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!offer.end_date) return;
@@ -74,6 +77,15 @@ export const OfferBanner = ({ offer }: OfferBannerProps) => {
             </Badge>
           )}
         </div>
+        
+        <Button 
+          onClick={() => navigate("/")} 
+          className="w-full mt-4 text-lg py-6 bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
+          size="lg"
+        >
+          <ShoppingCart className="w-5 h-5 ml-2" />
+          اطلب الآن - احجز قبل نفاذ الكمية!
+        </Button>
       </CardContent>
     </Card>
   );
