@@ -209,17 +209,12 @@ export const ProductManager = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
-        <Button onClick={() => { 
-          if (isAdding && !editingProduct) {
-            setIsAdding(false);
-          } else {
-            handleCancelEdit();
-            setIsAdding(!isAdding);
-          }
-        }}>
-          <Plus className="w-4 h-4 ml-2" />
-          {isAdding ? "إلغاء" : "إضافة منتج"}
-        </Button>
+        {!editingProduct && (
+          <Button onClick={() => setIsAdding(!isAdding)}>
+            <Plus className="w-4 h-4 ml-2" />
+            {isAdding ? "إلغاء" : "إضافة منتج"}
+          </Button>
+        )}
       </div>
 
       {isAdding && (
@@ -334,10 +329,10 @@ export const ProductManager = () => {
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={handleSubmit} disabled={addProductMutation.isPending}>
-                {addProductMutation.isPending ? "جاري الحفظ..." : "حفظ المنتج"}
+              <Button onClick={handleSubmit} disabled={addProductMutation.isPending || updateProductMutation.isPending}>
+                {(addProductMutation.isPending || updateProductMutation.isPending) ? "جاري الحفظ..." : editingProduct ? "تحديث المنتج" : "حفظ المنتج"}
               </Button>
-              <Button variant="outline" onClick={() => setIsAdding(false)}>
+              <Button variant="outline" onClick={handleCancelEdit}>
                 إلغاء
               </Button>
             </div>

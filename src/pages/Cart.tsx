@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, Package, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
+import { useNavigate } from "react-router-dom";
 
 const shippingPrices: Record<string, number> = {
   "القاهرة": 55,
@@ -47,6 +48,7 @@ const shippingPrices: Record<string, number> = {
 };
 
 const Cart = () => {
+  const navigate = useNavigate();
   const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount } = useCart();
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -317,6 +319,28 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
                   >
                     {createOrderMutation.isPending ? "جاري الإرسال..." : "إرسال الطلب عبر واتساب 📱"}
                   </Button>
+                  
+                  {/* Policy Links */}
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => navigate("/shipping-policy")}
+                    >
+                      <Package className="w-4 h-4 ml-1" />
+                      سياسة الشحن
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => navigate("/return-policy")}
+                    >
+                      <RefreshCw className="w-4 h-4 ml-1" />
+                      سياسة الاستبدال
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

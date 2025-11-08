@@ -79,7 +79,7 @@ export const OfferBanner = ({ offer }: OfferBannerProps) => {
         </div>
         
         <Button 
-          onClick={() => navigate("/")} 
+          onClick={() => window.open("https://wa.me/201033050236?text=" + encodeURIComponent("مرحباً، أريد الاستفسار عن العرض: " + offer.title_ar), "_blank")} 
           className="w-full mt-4 text-lg py-6 bg-gradient-to-r from-primary to-secondary hover:opacity-90 transition-opacity"
           size="lg"
         >
