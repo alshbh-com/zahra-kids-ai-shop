@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Upload } from "lucide-react";
+import { Plus, Upload, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 export const ProductManager = () => {
@@ -205,6 +205,40 @@ export const ProductManager = () => {
     }
   };
 
+  const deleteProductMutation = useMutation({
+    mutationFn: async (productId: string) => {
+      // Delete product images first
+      const { error: imagesError } = await supabase
+        .from("product_images")
+        .delete()
+        .eq("product_id", productId);
+      
+      if (imagesError) throw imagesError;
+
+      // Then delete the product
+      const { error: productError } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", productId);
+      
+      if (productError) throw productError;
+    },
+    onSuccess: () => {
+      toast.success("تم حذف المنتج بنجاح!");
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (error) => {
+      console.error("Error deleting product:", error);
+      toast.error("حدث خطأ في حذف المنتج");
+    },
+  });
+
+  const handleDelete = (productId: string) => {
+    if (confirm("هل أنت متأكد من حذف هذا المنتج؟")) {
+      deleteProductMutation.mutate(productId);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -353,14 +387,25 @@ export const ProductManager = () => {
               <p className="text-sm text-muted-foreground">{product.name_en}</p>
               <p className="text-lg font-bold text-primary mt-2">{product.price} جنيه</p>
               <p className="text-sm text-muted-foreground">المخزن: {product.stock_quantity}</p>
-              <Button
-                onClick={() => handleEdit(product)}
-                className="w-full mt-3"
-                variant="outline"
-                size="sm"
-              >
-                تعديل المنتج
-              </Button>
+              <div className="flex gap-2 mt-3">
+                <Button
+                  onClick={() => handleEdit(product)}
+                  className="flex-1"
+                  variant="outline"
+                  size="sm"
+                >
+                  تعديل
+                </Button>
+                <Button
+                  onClick={() => handleDelete(product.id)}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  حذف
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
