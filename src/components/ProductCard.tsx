@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Share2, Eye, Flame } from "lucide-react";
+import { Star, Share2, Eye, Flame, Clock, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
@@ -22,6 +22,34 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
   // أعداد وهمية للمشاهدين (عشوائية بين 300-800)
   const [viewersCount] = useState(Math.floor(Math.random() * (800 - 300 + 1)) + 300);
+  
+  // عد تنازلي مزيف يبدأ من 24 ساعة
+  const [timeLeft, setTimeLeft] = useState({
+    hours: Math.floor(Math.random() * (23 - 2 + 1)) + 2,
+    minutes: Math.floor(Math.random() * 60),
+    seconds: Math.floor(Math.random() * 60)
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        } else if (prev.hours > 0) {
+          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        } else {
+          return { hours: 23, minutes: 59, seconds: 59 };
+        }
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // قطع متبقية أقل من المشاهدين
+  const remainingStock = Math.max(1, Math.floor(viewersCount * 0.3));
 
   const handleShare = () => {
     const productUrl = `${window.location.origin}/product/${product.id}`;
@@ -54,12 +82,31 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <p className="text-sm text-muted-foreground line-clamp-1">{product.name_en}</p>
         </div>
 
-        {/* عدد المشاهدين */}
-        <div className="flex items-center gap-2 text-sm">
-          <Eye className="w-4 h-4 text-primary" />
-          <span className="font-medium text-primary">{viewersCount}</span>
-          <span className="text-muted-foreground">يشاهدون الآن</span>
-          <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+        {/* العد التنازلي */}
+        {hasDiscount && (
+          <div className="flex items-center gap-2 text-sm bg-destructive/10 text-destructive px-3 py-2 rounded-md">
+            <Clock className="w-4 h-4 animate-pulse" />
+            <span className="font-bold">
+              {String(timeLeft.hours).padStart(2, '0')}:
+              {String(timeLeft.minutes).padStart(2, '0')}:
+              {String(timeLeft.seconds).padStart(2, '0')}
+            </span>
+            <span className="text-xs">ينتهي العرض</span>
+          </div>
+        )}
+
+        {/* عدد المشاهدين والقطع المتبقية */}
+        <div className="flex flex-col gap-1 text-sm">
+          <div className="flex items-center gap-2">
+            <Eye className="w-4 h-4 text-primary" />
+            <span className="font-medium text-primary">{viewersCount}</span>
+            <span className="text-muted-foreground">يشاهدون الآن</span>
+            <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+          </div>
+          <div className="flex items-center gap-2 text-xs text-orange-600">
+            <Flame className="w-3 h-3" />
+            <span>متبقي {remainingStock} قطعة فقط!</span>
+          </div>
         </div>
 
         {product.rating > 0 && (
@@ -88,28 +135,44 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           </Badge>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2">
           <Button 
-            className="flex-1" 
+            className="w-full bg-gradient-to-r from-primary to-accent" 
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
               addToCart(product);
+              navigate('/cart');
             }}
             disabled={product.stock_quantity === 0}
           >
-            {product.stock_quantity === 0 ? 'نفذت الكمية' : 'أضف للسلة'}
+            <ShoppingCart className="w-4 h-4 ml-2" />
+            {product.stock_quantity === 0 ? 'نفذت الكمية' : 'اضغط للشراء'}
           </Button>
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleShare();
-            }}
-          >
-            <Share2 className="w-4 h-4" />
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              className="flex-1" 
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                addToCart(product);
+              }}
+              disabled={product.stock_quantity === 0}
+            >
+              وضع في السلة
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleShare();
+              }}
+            >
+              <Share2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

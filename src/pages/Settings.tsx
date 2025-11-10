@@ -26,12 +26,12 @@ const Settings = () => {
         // If no password exists, insert the default one
         const { data: newPassword } = await supabase
           .from("site_settings")
-          .insert([{ key: "admin_password", value: "01278006248m" }])
+          .insert([{ key: "admin_password", value: "Magdi17121997" }])
           .select()
           .single();
-        return newPassword?.value || "01278006248m";
+        return newPassword?.value || "Magdi17121997";
       }
-      return data?.value || "01278006248m";
+      return data?.value || "Magdi17121997";
     },
   });
 

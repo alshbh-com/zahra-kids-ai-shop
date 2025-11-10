@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Facebook, Instagram, Share2, FileText, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SiTiktok } from "react-icons/si";
 
 export const SocialLinks = () => {
   const navigate = useNavigate();
@@ -43,6 +44,15 @@ export const SocialLinks = () => {
           >
             <Instagram className="w-5 h-5 ml-2" />
             انستجرام
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => window.open("https://vm.tiktok.com/ZSHcsqADrCvcn-4c9Hk/", "_blank")}
+          >
+            <SiTiktok className="w-5 h-5 ml-2" />
+            تيك توك
           </Button>
         </CardContent>
       </Card>
