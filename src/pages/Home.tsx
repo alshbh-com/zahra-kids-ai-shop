@@ -5,6 +5,7 @@ import { OfferBanner } from "@/components/OfferBanner";
 import { AiChatAssistant } from "@/components/AiChatAssistant";
 import { SearchBar } from "@/components/SearchBar";
 import { Facebook, Instagram } from "lucide-react";
+import { SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
 
@@ -76,6 +77,14 @@ const Home = () => {
                 onClick={() => window.open("https://www.facebook.com/share/1S2E4pmTMk/", "_blank")}
               >
                 <Facebook className="w-5 h-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full hover:bg-primary/10"
+                onClick={() => window.open("https://vm.tiktok.com/ZSHcsqADrCvcn-4c9Hk/", "_blank")}
+              >
+                <SiTiktok className="w-5 h-5" />
               </Button>
               <Button
                 variant="ghost"

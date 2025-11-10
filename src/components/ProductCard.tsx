@@ -24,11 +24,17 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const [viewersCount] = useState(Math.floor(Math.random() * (800 - 300 + 1)) + 300);
   
   // عد تنازلي مزيف يبدأ من 24 ساعة
+  const initialHours = Math.floor(Math.random() * (23 - 2 + 1)) + 2;
   const [timeLeft, setTimeLeft] = useState({
-    hours: Math.floor(Math.random() * (23 - 2 + 1)) + 2,
+    hours: initialHours,
     minutes: Math.floor(Math.random() * 60),
     seconds: Math.floor(Math.random() * 60)
   });
+
+  // حساب النسبة المئوية للتقدم (Progress)
+  const totalSeconds = 24 * 60 * 60; // 24 ساعة بالثواني
+  const currentSeconds = (timeLeft.hours * 60 * 60) + (timeLeft.minutes * 60) + timeLeft.seconds;
+  const progressPercentage = (currentSeconds / totalSeconds) * 100;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -82,16 +88,25 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           <p className="text-sm text-muted-foreground line-clamp-1">{product.name_en}</p>
         </div>
 
-        {/* العد التنازلي */}
+        {/* العد التنازلي مع Progress Bar */}
         {hasDiscount && (
-          <div className="flex items-center gap-2 text-sm bg-destructive/10 text-destructive px-3 py-2 rounded-md">
-            <Clock className="w-4 h-4 animate-pulse" />
-            <span className="font-bold">
-              {String(timeLeft.hours).padStart(2, '0')}:
-              {String(timeLeft.minutes).padStart(2, '0')}:
-              {String(timeLeft.seconds).padStart(2, '0')}
-            </span>
-            <span className="text-xs">ينتهي العرض</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-sm bg-destructive/10 text-destructive px-3 py-2 rounded-md">
+              <Clock className="w-4 h-4 animate-pulse" />
+              <span className="font-bold">
+                {String(timeLeft.hours).padStart(2, '0')}:
+                {String(timeLeft.minutes).padStart(2, '0')}:
+                {String(timeLeft.seconds).padStart(2, '0')}
+              </span>
+              <span className="text-xs">ينتهي العرض</span>
+            </div>
+            {/* Progress Bar */}
+            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-destructive to-orange-500 transition-all duration-1000 ease-linear"
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
           </div>
         )}
 
