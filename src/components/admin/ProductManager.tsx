@@ -115,9 +115,13 @@ export const ProductManager = () => {
     if (editingProduct) {
       updateProductMutation.mutate({
         id: editingProduct.id,
-        ...formData,
+        name_ar: formData.name_ar,
+        name_en: formData.name_en || formData.name_ar,
+        description_ar: formData.description_ar || null,
+        description_en: formData.description_en || null,
         price: parseFloat(formData.price),
         discount_price: formData.discount_price ? parseFloat(formData.discount_price) : null,
+        category_id: formData.category_id || null,
         stock_quantity: formData.stock_quantity ? parseInt(formData.stock_quantity) : 0,
       });
     } else {
