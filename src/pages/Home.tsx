@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
@@ -10,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
 
 const Home = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+
   const { data: products } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -23,6 +27,18 @@ const Home = () => {
       if (error) throw error;
       return data;
     },
+  });
+
+  // تصفية المنتجات حسب البحث والسعر
+  const filteredProducts = products?.filter((product) => {
+    const matchesSearch = !searchQuery || 
+      product.name_ar.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.name_en?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const effectivePrice = product.discount_price || product.price;
+    const matchesPrice = !maxPrice || effectivePrice <= maxPrice;
+    
+    return matchesSearch && matchesPrice;
   });
 
   const { data: offers } = useQuery({
@@ -100,8 +116,11 @@ const Home = () => {
       </div>
 
       <div className="container mx-auto px-4 space-y-8">
-        {/* Search Bar with Voice/Image */}
-        <SearchBar />
+        {/* Search Bar with Voice/Image and Price Filter */}
+        <SearchBar 
+          onSearch={setSearchQuery}
+          onPriceFilter={setMaxPrice}
+        />
 
         {/* Active Offers */}
         {offers && offers.length > 0 && (
@@ -117,15 +136,22 @@ const Home = () => {
 
         {/* Products Grid */}
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold">المنتجات</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">المنتجات</h2>
+            {(searchQuery || maxPrice) && (
+              <span className="text-sm text-muted-foreground">
+                {filteredProducts?.length} منتج
+              </span>
+            )}
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products?.map((product) => (
+            {filteredProducts?.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>
-          {products?.length === 0 && (
+          {filteredProducts?.length === 0 && (
             <div className="text-center py-16 text-muted-foreground">
-              لا توجد منتجات حالياً
+              {searchQuery || maxPrice ? "لا توجد منتجات مطابقة" : "لا توجد منتجات حالياً"}
             </div>
           )}
         </div>

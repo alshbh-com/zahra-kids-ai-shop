@@ -1,10 +1,11 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Share2, Eye, Flame, Clock, ShoppingCart } from "lucide-react";
+import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
 import { useState, useEffect } from "react";
 
 interface ProductCardProps {
@@ -14,6 +15,9 @@ interface ProductCardProps {
 export const ProductCard = ({ product }: ProductCardProps) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  
+  const inWishlist = isInWishlist(product.id);
   
   const hasDiscount = product.discount_price && product.discount_price < product.price;
   const discountPercentage = hasDiscount
@@ -63,6 +67,15 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     toast.success("تم نسخ رابط المنتج!");
   };
 
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (inWishlist) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product);
+    }
+  };
+
   return (
     <Card className="group overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer">
       <div className="relative overflow-hidden" onClick={() => navigate(`/product/${product.id}`)}>
@@ -76,6 +89,14 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             مميز ⭐
           </Badge>
         )}
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-2 left-2 z-10 bg-background/80 hover:bg-background"
+          onClick={handleWishlistToggle}
+        >
+          <Heart className={`w-5 h-5 ${inWishlist ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
+        </Button>
         <img
           src={product.product_images?.[0]?.image_url || "/placeholder.svg"}
           alt={product.name_ar}
