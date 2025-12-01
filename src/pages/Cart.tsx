@@ -10,6 +10,7 @@ import { Minus, Plus, Trash2, ShoppingBag, Package, RefreshCw } from "lucide-rea
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { useNavigate } from "react-router-dom";
+import { ThankYou3D } from "@/components/ThankYou3D";
 
 const shippingPrices: Record<string, number> = {
   "القاهرة": 55,
@@ -56,6 +57,7 @@ const Cart = () => {
   const [customerEmail, setCustomerEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [selectedGovernorate, setSelectedGovernorate] = useState("");
+  const [showThankYou, setShowThankYou] = useState(false);
 
   const shippingCost = selectedGovernorate ? shippingPrices[selectedGovernorate] || 0 : 0;
   const finalTotal = totalAmount + shippingCost;
@@ -64,27 +66,71 @@ const Cart = () => {
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
-      const { data, error } = await supabase
-        .from("orders")
-        .insert([orderData])
+      // أولاً: إنشاء العميل
+      const { data: customer, error: customerError } = await supabase
+        .from("customers")
+        .insert([{
+          name: orderData.customerName,
+          phone: orderData.customerPhone,
+          address: orderData.customerAddress,
+          governorate: orderData.governorate
+        }])
         .select()
         .single();
       
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: async (order) => {
-      // Create WhatsApp message
-      const message = `
-🛍️ *طلب جديد من متجر زهرة* 🛍️
+      if (customerError) throw customerError;
 
-📋 رقم الطلب: #${order.order_number}
+      // ثانياً: إنشاء الطلب
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
+        .insert([{
+          customer_id: customer.id,
+          total_amount: orderData.total,
+          shipping_cost: orderData.shipping,
+          notes: orderData.notes,
+          order_details: JSON.stringify(orderData.items)
+        }])
+        .select()
+        .single();
+      
+      if (orderError) throw orderError;
+
+      // ثالثاً: إنشاء order_items
+      const orderItems = orderData.items.map((item: any) => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        product_details: item.name_ar
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .insert(orderItems);
+      
+      if (itemsError) throw itemsError;
+
+      return order;
+    },
+    onSuccess: (order) => {
+      // عرض صفحة الشكر 3D
+      setShowThankYou(true);
+    },
+    onError: (error) => {
+      console.error("Order error:", error);
+      toast.error("حدث خطأ في إرسال الطلب");
+    },
+  });
+
+  const handleThankYouComplete = () => {
+    // بعد 5 ثواني، افتح واتساب
+    const message = `
+🛍️ *طلب جديد من متجر زهرة* 🛍️
 
 👤 *معلومات العميل:*
 الاسم: ${customerName}
 الهاتف: ${customerPhone}
-${customerEmail ? `البريد: ${customerEmail}` : ''}
-العنوان: ${customerAddress}
+${customerEmail ? `البريد: ${customerEmail}\n` : ''}العنوان: ${customerAddress}
 المحافظة: ${selectedGovernorate}
 
 🛒 *تفاصيل الطلب:*
@@ -99,28 +145,25 @@ ${cart.map(item => `
 💵 *الإجمالي الكلي: ${finalTotal} جنيه*
 
 ${notes ? `📝 ملاحظات: ${notes}` : ''}
-      `.trim();
+    `.trim();
 
-      const whatsappUrl = `https://wa.me/201033050236?text=${encodeURIComponent(message)}`;
-      window.open(whatsappUrl, '_blank');
+    const whatsappUrl = `https://wa.me/201033050236?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
 
-      // Clear cart and form
-      clearCart();
-      setCustomerName("");
-      setCustomerPhone("");
-      setCustomerAddress("");
-      setCustomerEmail("");
-      setNotes("");
-      setSelectedGovernorate("");
+    // مسح السلة والبيانات
+    clearCart();
+    setCustomerName("");
+    setCustomerPhone("");
+    setCustomerAddress("");
+    setCustomerEmail("");
+    setNotes("");
+    setSelectedGovernorate("");
+    setShowThankYou(false);
 
-      toast.success("تم إرسال طلبك بنجاح! ✅");
-      queryClient.invalidateQueries({ queryKey: ["orders"] });
-    },
-    onError: (error) => {
-      console.error("Order error:", error);
-      toast.error("حدث خطأ في إرسال الطلب");
-    },
-  });
+    toast.success("تم إرسال طلبك بنجاح! ✅");
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    navigate("/");
+  };
 
   const handleSubmitOrder = () => {
     if (!customerName || !customerPhone || !customerAddress || !selectedGovernorate) {
@@ -133,24 +176,26 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
       return;
     }
 
-    const orderData = {
-      customer_name: customerName,
-      customer_phone: customerPhone,
-      customer_address: customerAddress,
-      customer_email: customerEmail || null,
+    createOrderMutation.mutate({
+      customerName,
+      customerPhone,
+      customerAddress,
+      governorate: selectedGovernorate,
       notes: notes || null,
       items: cart.map(item => ({
-        product_id: item.id,
-        product_name: item.name_ar,
+        id: item.id,
+        name_ar: item.name_ar,
         quantity: item.quantity,
-        price: item.discount_price || item.price,
+        price: item.discount_price || item.price
       })),
-      total_amount: finalTotal,
-      status: "pending",
-    };
-
-    createOrderMutation.mutate(orderData);
+      total: finalTotal,
+      shipping: shippingCost
+    });
   };
+
+  if (showThankYou) {
+    return <ThankYou3D onComplete={handleThankYouComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background pb-24">
@@ -317,7 +362,7 @@ ${notes ? `📝 ملاحظات: ${notes}` : ''}
                     onClick={handleSubmitOrder}
                     disabled={createOrderMutation.isPending || cart.length === 0}
                   >
-                    {createOrderMutation.isPending ? "جاري الإرسال..." : "إرسال الطلب عبر واتساب 📱"}
+                    {createOrderMutation.isPending ? "جاري الإرسال..." : "إكمال الطلب"}
                   </Button>
                   
                   {/* Policy Links */}
