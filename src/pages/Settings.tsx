@@ -17,21 +17,11 @@ const Settings = () => {
     queryKey: ["admin-password"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("site_settings")
-        .select("value")
-        .eq("key", "admin_password")
+        .from("settings")
+        .select("password")
         .single();
       
-      if (error) {
-        // If no password exists, insert the default one
-        const { data: newPassword } = await supabase
-          .from("site_settings")
-          .insert([{ key: "admin_password", value: "Magdi17121997" }])
-          .select()
-          .single();
-        return newPassword?.value || "Magdi17121997";
-      }
-      return data?.value || "Magdi17121997";
+      return data?.password || "Magdi17121997";
     },
   });
 

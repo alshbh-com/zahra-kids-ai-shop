@@ -24,8 +24,7 @@ export default function ProductDetail() {
             display_order
           ),
           categories (
-            name_ar,
-            name_en
+            name
           )
         `)
         .eq('id', id)
@@ -93,7 +92,7 @@ export default function ProductDetail() {
             </div>
 
             {product.categories && (
-              <Badge variant="outline">{product.categories.name_ar}</Badge>
+              <Badge variant="outline">{product.categories.name}</Badge>
             )}
 
             {product.rating > 0 && (

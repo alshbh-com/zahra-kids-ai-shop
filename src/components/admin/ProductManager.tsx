@@ -338,7 +338,7 @@ export const ProductManager = () => {
                 <SelectContent>
                   {categories?.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
-                      {category.name_ar}
+                      {category.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -35,13 +35,29 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     minutes: Math.floor(Math.random() * 60),
     seconds: Math.floor(Math.random() * 60)
   });
+  const [isWaiting, setIsWaiting] = useState(false);
 
-  // حساب النسبة المئوية للتقدم (Progress)
+  // حساب النسبة المئوية للتقدم (Progress) - يبدأ من 50% ويصل لـ 0%
   const totalSeconds = 24 * 60 * 60; // 24 ساعة بالثواني
   const currentSeconds = (timeLeft.hours * 60 * 60) + (timeLeft.minutes * 60) + timeLeft.seconds;
-  const progressPercentage = (currentSeconds / totalSeconds) * 100;
+  const maxProgress = 50; // يبدأ من 50%
+  const progressPercentage = Math.max(0, (currentSeconds / totalSeconds) * 100 * (maxProgress / 100));
 
   useEffect(() => {
+    if (isWaiting) {
+      // انتظر دقيقة واحدة ثم ابدأ من جديد
+      const waitTimer = setTimeout(() => {
+        setTimeLeft({
+          hours: Math.floor(Math.random() * (23 - 2 + 1)) + 2,
+          minutes: Math.floor(Math.random() * 60),
+          seconds: Math.floor(Math.random() * 60)
+        });
+        setIsWaiting(false);
+      }, 60000); // دقيقة واحدة
+
+      return () => clearTimeout(waitTimer);
+    }
+
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev.seconds > 0) {
@@ -51,13 +67,15 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         } else if (prev.hours > 0) {
           return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
         } else {
-          return { hours: 23, minutes: 59, seconds: 59 };
+          // وصل للصفر - ابدأ فترة الانتظار
+          setIsWaiting(true);
+          return { hours: 0, minutes: 0, seconds: 0 };
         }
       });
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isWaiting]);
 
   // قطع متبقية أقل من المشاهدين
   const remainingStock = Math.max(1, Math.floor(viewersCount * 0.3));
@@ -77,8 +95,16 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     }
   };
 
-  const productImages = product.product_images || [];
+  // دعم الصور من product_images أو image_url
+  const productImages = product.product_images && product.product_images.length > 0 
+    ? product.product_images 
+    : product.image_url 
+      ? [{ image_url: product.image_url }] 
+      : [];
   const hasMultipleImages = productImages.length > 1;
+  
+  // دعم الكمية من stock_quantity أو stock
+  const stockQuantity = product.stock_quantity ?? product.stock ?? 0;
 
   return (
     <Card className="group overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer">
@@ -189,7 +215,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           </span>
         </div>
 
-        {product.stock_quantity <= product.low_stock_threshold && product.stock_quantity > 0 && (
+        {stockQuantity <= (product.low_stock_threshold || 5) && stockQuantity > 0 && (
           <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-600 border-orange-500">
             <Flame className="w-3 h-3 ml-1 animate-pulse" />
             الكمية محدودة - اسرع للشراء!
@@ -205,10 +231,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
               addToCart(product);
               navigate('/cart');
             }}
-            disabled={product.stock_quantity === 0}
+            disabled={stockQuantity === 0}
           >
             <ShoppingCart className="w-4 h-4 ml-2" />
-            {product.stock_quantity === 0 ? 'نفذت الكمية' : 'اضغط للشراء'}
+            {stockQuantity === 0 ? 'نفذت الكمية' : 'اضغط للشراء'}
           </Button>
           <div className="flex gap-2">
             <Button 
@@ -219,7 +245,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                 e.stopPropagation();
                 addToCart(product);
               }}
-              disabled={product.stock_quantity === 0}
+              disabled={stockQuantity === 0}
             >
               وضع في السلة
             </Button>

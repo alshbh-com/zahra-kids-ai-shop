@@ -563,6 +563,24 @@ export type Database = {
           },
         ]
       }
+      settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          password: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          password: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          password?: string
+        }
+        Relationships: []
+      }
       statistics: {
         Row: {
           id: string
