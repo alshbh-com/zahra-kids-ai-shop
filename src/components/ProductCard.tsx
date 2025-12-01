@@ -1,12 +1,13 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart } from "lucide-react";
+import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useState, useEffect } from "react";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 interface ProductCardProps {
   product: any;
@@ -76,9 +77,12 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     }
   };
 
+  const productImages = product.product_images || [];
+  const hasMultipleImages = productImages.length > 1;
+
   return (
     <Card className="group overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer">
-      <div className="relative overflow-hidden" onClick={() => navigate(`/product/${product.id}`)}>
+      <div className="relative overflow-hidden">
         {hasDiscount && (
           <Badge className="absolute top-2 right-2 z-10 bg-gradient-to-r from-accent to-destructive border-0">
             خصم {discountPercentage}%
@@ -92,16 +96,37 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-2 left-2 z-10 bg-background/80 hover:bg-background"
+          className="absolute bottom-2 left-2 z-10 bg-background/80 hover:bg-background"
           onClick={handleWishlistToggle}
         >
           <Heart className={`w-5 h-5 ${inWishlist ? 'fill-primary text-primary' : 'text-muted-foreground'}`} />
         </Button>
-        <img
-          src={product.product_images?.[0]?.image_url || "/placeholder.svg"}
-          alt={product.name_ar}
-          className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+        
+        {hasMultipleImages ? (
+          <Carousel className="w-full" onClick={() => navigate(`/product/${product.id}`)}>
+            <CarouselContent>
+              {productImages.map((img: any, index: number) => (
+                <CarouselItem key={index}>
+                  <img
+                    src={img.image_url || "/placeholder.svg"}
+                    alt={`${product.name_ar} - صورة ${index + 1}`}
+                    className="w-full h-64 object-cover"
+                  />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious className="right-2 left-auto" />
+            <CarouselNext className="left-2 right-auto" />
+          </Carousel>
+        ) : (
+          <div onClick={() => navigate(`/product/${product.id}`)}>
+            <img
+              src={productImages[0]?.image_url || "/placeholder.svg"}
+              alt={product.name_ar}
+              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          </div>
+        )}
       </div>
       <CardContent className="p-4 space-y-3">
         <div>
