@@ -1,0 +1,244 @@
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart, X } from "lucide-react";
+import { useCart } from "@/contexts/CartContext";
+import { useWishlist } from "@/contexts/WishlistContext";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+
+interface ProductModalProps {
+  product: any;
+  isOpen: boolean;
+  onClose: () => void;
+  timeLeft: { hours: number; minutes: number; seconds: number };
+  viewersCount: number;
+  progressPercentage: number;
+}
+
+export const ProductModal = ({ 
+  product, 
+  isOpen, 
+  onClose,
+  timeLeft,
+  viewersCount,
+  progressPercentage
+}: ProductModalProps) => {
+  const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const navigate = useNavigate();
+  
+  const inWishlist = isInWishlist(product.id);
+  
+  const hasDiscount = product.discount_price && product.discount_price < product.price;
+  const discountPercentage = hasDiscount
+    ? Math.round(((product.price - product.discount_price) / product.price) * 100)
+    : 0;
+
+  const remainingStock = Math.max(1, Math.floor(viewersCount * 0.3));
+
+  const handleShare = () => {
+    const productUrl = `${window.location.origin}/product/${product.id}`;
+    navigator.clipboard.writeText(productUrl);
+    toast.success("تم نسخ رابط المنتج!");
+  };
+
+  const handleWishlistToggle = () => {
+    if (inWishlist) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product);
+    }
+  };
+
+  const productImages = product.product_images && product.product_images.length > 0 
+    ? product.product_images 
+    : product.image_url 
+      ? [{ image_url: product.image_url }] 
+      : [];
+  
+  const stockQuantity = product.stock_quantity ?? product.stock ?? 0;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute left-4 top-4 z-50"
+          onClick={onClose}
+        >
+          <X className="w-5 h-5" />
+        </Button>
+
+        <div className="grid md:grid-cols-2 gap-6 pt-8">
+          {/* الصور */}
+          <div className="relative">
+            {hasDiscount && (
+              <Badge className="absolute top-2 right-2 z-10 bg-gradient-to-r from-accent to-destructive border-0">
+                خصم {discountPercentage}%
+              </Badge>
+            )}
+            {product.is_featured && (
+              <Badge className="absolute top-2 left-2 z-10 bg-gradient-to-r from-primary to-secondary border-0">
+                مميز ⭐
+              </Badge>
+            )}
+            
+            {productImages.length > 1 ? (
+              <Carousel className="w-full">
+                <CarouselContent>
+                  {productImages.map((img: any, index: number) => (
+                    <CarouselItem key={index}>
+                      <img
+                        src={img.image_url || "/placeholder.svg"}
+                        alt={`${product.name_ar} - صورة ${index + 1}`}
+                        className="w-full h-96 object-cover rounded-lg"
+                      />
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="right-2 left-auto" />
+                <CarouselNext className="left-2 right-auto" />
+              </Carousel>
+            ) : (
+              <img
+                src={productImages[0]?.image_url || "/placeholder.svg"}
+                alt={product.name_ar}
+                className="w-full h-96 object-cover rounded-lg"
+              />
+            )}
+          </div>
+
+          {/* التفاصيل */}
+          <div className="space-y-4">
+            <DialogHeader>
+              <h2 className="text-2xl font-bold">{product.name_ar}</h2>
+              <p className="text-muted-foreground">{product.name_en}</p>
+            </DialogHeader>
+
+            {/* العد التنازلي */}
+            {hasDiscount && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm bg-destructive/10 text-destructive px-3 py-2 rounded-md">
+                  <Clock className="w-4 h-4 animate-pulse" />
+                  <span className="font-bold">
+                    {String(timeLeft.hours).padStart(2, '0')}:
+                    {String(timeLeft.minutes).padStart(2, '0')}:
+                    {String(timeLeft.seconds).padStart(2, '0')}
+                  </span>
+                  <span className="text-xs">ينتهي العرض</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-destructive to-orange-500 transition-all duration-1000 ease-linear"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* عدد المشاهدين */}
+            <div className="flex flex-col gap-1 text-sm">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-primary" />
+                <span className="font-medium text-primary">{viewersCount}</span>
+                <span className="text-muted-foreground">يشاهدون الآن</span>
+                <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+              </div>
+              <div className="flex items-center gap-2 text-xs text-orange-600">
+                <Flame className="w-3 h-3" />
+                <span>متبقي {remainingStock} قطعة فقط!</span>
+              </div>
+            </div>
+
+            {/* التقييم */}
+            {product.rating > 0 && (
+              <div className="flex items-center gap-1">
+                <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                <span className="font-medium">{product.rating}</span>
+                <span className="text-sm text-muted-foreground">({product.reviews_count} تقييم)</span>
+              </div>
+            )}
+
+            {/* السعر */}
+            <div className="flex items-center gap-3">
+              {hasDiscount && (
+                <span className="text-lg text-muted-foreground line-through">
+                  {product.price} جنيه
+                </span>
+              )}
+              <span className="text-3xl font-bold text-primary">
+                {hasDiscount ? product.discount_price : product.price} جنيه
+              </span>
+            </div>
+
+            {/* الكمية */}
+            {stockQuantity <= (product.low_stock_threshold || 5) && stockQuantity > 0 && (
+              <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-600 border-orange-500">
+                <Flame className="w-3 h-3 ml-1 animate-pulse" />
+                الكمية محدودة - اسرع للشراء!
+              </Badge>
+            )}
+
+            {/* الوصف */}
+            {(product.description_ar || product.description) && (
+              <div className="space-y-2">
+                <h3 className="font-semibold">الوصف</h3>
+                <p className="text-muted-foreground text-sm">
+                  {product.description_ar || product.description}
+                </p>
+              </div>
+            )}
+
+            {/* الأزرار */}
+            <div className="flex flex-col gap-2 pt-4">
+              <Button 
+                className="w-full bg-gradient-to-r from-primary to-accent" 
+                size="lg"
+                onClick={() => {
+                  addToCart(product);
+                  navigate('/cart');
+                  onClose();
+                }}
+                disabled={stockQuantity === 0}
+              >
+                <ShoppingCart className="w-5 h-5 ml-2" />
+                {stockQuantity === 0 ? 'نفذت الكمية' : 'اضغط للشراء'}
+              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  className="flex-1" 
+                  size="lg"
+                  variant="outline"
+                  onClick={() => {
+                    addToCart(product);
+                    toast.success("تم إضافة المنتج للسلة");
+                  }}
+                  disabled={stockQuantity === 0}
+                >
+                  وضع في السلة
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={handleWishlistToggle}
+                >
+                  <Heart className={`w-5 h-5 ${inWishlist ? 'fill-primary text-primary' : ''}`} />
+                </Button>
+                <Button 
+                  size="lg" 
+                  variant="outline" 
+                  onClick={handleShare}
+                >
+                  <Share2 className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
