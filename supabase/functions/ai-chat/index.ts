@@ -1,8 +1,6 @@
 import "https://deno.land/x/xhr@0.3.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const GEMINI_API_KEY = "AIzaSyDfHHHrvAPIwn9Z4E5Ngks6xwWj24fPfIs";
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -16,6 +14,12 @@ serve(async (req) => {
   try {
     const { messages, action } = await req.json();
     console.log('AI Chat request:', { action, messageCount: messages?.length });
+
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY is not configured');
+      throw new Error('AI service not configured');
+    }
 
     // System prompts for different actions
     const systemPrompts: Record<string, string> = {
@@ -69,47 +73,68 @@ serve(async (req) => {
     const systemPrompt = systemPrompts[action || 'chat'] || systemPrompts.chat;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [
+          model: 'google/gemini-2.5-flash',
+          messages: [
             {
-              role: 'user',
-              parts: [
-                {
-                  text: systemPrompt,
-                },
-              ],
+              role: 'system',
+              content: systemPrompt,
             },
             ...messages.map((msg: any) => ({
-              role: msg.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: msg.content }],
+              role: msg.role,
+              content: msg.content,
             })),
           ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
-          },
+          temperature: 0.7,
+          max_tokens: 1024,
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
-      throw new Error(`Gemini API error: ${response.status}`);
+      console.error('Lovable AI Gateway error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Rate limit exceeded',
+            message: 'عذراً، تم الوصول للحد الأقصى من الطلبات. حاول مرة أخرى بعد قليل.'
+          }),
+          { 
+            status: 429,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Payment required',
+            message: 'عذراً، تم انتهاء الرصيد المتاح. يرجى إضافة رصيد من الإعدادات.'
+          }),
+          { 
+            status: 402,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      
+      throw new Error(`AI Gateway error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Gemini response received');
+    console.log('Lovable AI response received');
 
-    const aiMessage = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+    const aiMessage = data.choices?.[0]?.message?.content || 
                      'عذراً، لم أتمكن من معالجة طلبك. حاول مرة أخرى.';
 
     return new Response(
