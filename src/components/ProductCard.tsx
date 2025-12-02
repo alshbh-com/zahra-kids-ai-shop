@@ -30,7 +30,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   // أعداد وهمية للمشاهدين (عشوائية بين 300-800)
   const [viewersCount] = useState(Math.floor(Math.random() * (800 - 300 + 1)) + 300);
   
-  // عد تنازلي مزيف يبدأ من 24 ساعة
+  // عد تنازلي مزيف يبدأ من وقت عشوائي
   const initialHours = Math.floor(Math.random() * (23 - 2 + 1)) + 2;
   const [timeLeft, setTimeLeft] = useState({
     hours: initialHours,
@@ -39,21 +39,25 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   });
   const [isWaiting, setIsWaiting] = useState(false);
 
-  // حساب النسبة المئوية للتقدم (Progress) - يبدأ من 50% ويصل لـ 0%
-  const totalSeconds = 24 * 60 * 60; // 24 ساعة بالثواني
-  const currentSeconds = (timeLeft.hours * 60 * 60) + (timeLeft.minutes * 60) + timeLeft.seconds;
-  const maxProgress = 50; // يبدأ من 50%
-  const progressPercentage = Math.max(0, (currentSeconds / totalSeconds) * 100 * (maxProgress / 100));
+  // حساب النسبة المئوية للتقدم - من 100% إلى 0%
+  const totalSeconds = (initialHours * 60 * 60) + (timeLeft.minutes * 60) + timeLeft.seconds;
+  const initialTotalSeconds = (initialHours * 60 * 60);
+  const progressPercentage = Math.max(0, (totalSeconds / initialTotalSeconds) * 100);
+  
+  // عداد fake للكمية المتبقية (يقل مع الوقت)
+  const [fakeStockLeft, setFakeStockLeft] = useState(Math.floor(Math.random() * (50 - 10 + 1)) + 10);
 
   useEffect(() => {
     if (isWaiting) {
       // انتظر دقيقة واحدة ثم ابدأ من جديد
+      const newHours = Math.floor(Math.random() * (23 - 2 + 1)) + 2;
       const waitTimer = setTimeout(() => {
         setTimeLeft({
-          hours: Math.floor(Math.random() * (23 - 2 + 1)) + 2,
+          hours: newHours,
           minutes: Math.floor(Math.random() * 60),
           seconds: Math.floor(Math.random() * 60)
         });
+        setFakeStockLeft(Math.floor(Math.random() * (50 - 10 + 1)) + 10);
         setIsWaiting(false);
       }, 60000); // دقيقة واحدة
 
@@ -63,6 +67,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
         if (prev.seconds > 0) {
+          // كل 10 ثواني، قلل الكمية المتبقية بشكل عشوائي
+          if (prev.seconds % 10 === 0 && fakeStockLeft > 5) {
+            setFakeStockLeft(current => Math.max(5, current - Math.floor(Math.random() * 3 + 1)));
+          }
           return { ...prev, seconds: prev.seconds - 1 };
         } else if (prev.minutes > 0) {
           return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
@@ -77,7 +85,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isWaiting]);
+  }, [isWaiting, fakeStockLeft]);
 
   // قطع متبقية أقل من المشاهدين
   const remainingStock = Math.max(1, Math.floor(viewersCount * 0.3));
@@ -105,8 +113,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       : [];
   const hasMultipleImages = productImages.length > 1;
   
-  // دعم الكمية من stock_quantity أو stock
-  const stockQuantity = product.stock_quantity ?? product.stock ?? 0;
+  // دعم الكمية من stock أو stock_quantity (نبدأ بـ stock أولاً)
+  const stockQuantity = product.stock ?? product.stock_quantity ?? 0;
 
   const handleCardClick = () => {
     setIsModalOpen(true);
@@ -136,25 +144,25 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </Button>
         
         {hasMultipleImages ? (
-          <Carousel className="w-full">
+          <Carousel className="w-full" opts={{ direction: "rtl" }}>
             <CarouselContent>
               {productImages.map((img: any, index: number) => (
                 <CarouselItem key={index}>
                   <img
                     src={img.image_url || "/placeholder.svg"}
-                    alt={`${product.name_ar} - صورة ${index + 1}`}
+                    alt={`${product.name_ar || product.name} - صورة ${index + 1}`}
                     className="w-full h-64 object-cover"
                   />
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="right-2 left-auto" />
-            <CarouselNext className="left-2 right-auto" />
+            <CarouselPrevious className="left-2 right-auto" />
+            <CarouselNext className="right-2 left-auto" />
           </Carousel>
         ) : (
           <img
             src={productImages[0]?.image_url || "/placeholder.svg"}
-            alt={product.name_ar}
+            alt={product.name_ar || product.name}
             className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
           />
         )}
@@ -166,26 +174,30 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </div>
 
         {/* العد التنازلي مع Progress Bar */}
-        {hasDiscount && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm bg-destructive/10 text-destructive px-3 py-2 rounded-md">
-              <Clock className="w-4 h-4 animate-pulse" />
-              <span className="font-bold">
-                {String(timeLeft.hours).padStart(2, '0')}:
-                {String(timeLeft.minutes).padStart(2, '0')}:
-                {String(timeLeft.seconds).padStart(2, '0')}
-              </span>
-              <span className="text-xs">ينتهي العرض</span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm bg-destructive/10 text-destructive px-3 py-2 rounded-md">
+            <Clock className="w-4 h-4 animate-pulse" />
+            <span className="font-bold">
+              {String(timeLeft.hours).padStart(2, '0')}:
+              {String(timeLeft.minutes).padStart(2, '0')}:
+              {String(timeLeft.seconds).padStart(2, '0')}
+            </span>
+            <span className="text-xs">ينتهي العرض</span>
+          </div>
+          {/* Progress Bar مع النسبة */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">العرض ينتهي قريباً!</span>
+              <span className="font-bold text-destructive">{Math.round(progressPercentage)}%</span>
             </div>
-            {/* Progress Bar */}
-            <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+            <div className="w-full bg-muted rounded-full h-3 overflow-hidden border border-destructive/20">
               <div 
-                className="h-full bg-gradient-to-r from-destructive to-orange-500 transition-all duration-1000 ease-linear"
+                className="h-full bg-gradient-to-r from-destructive via-orange-500 to-destructive transition-all duration-1000 ease-linear animate-pulse"
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
           </div>
-        )}
+        </div>
 
         {/* عدد المشاهدين والقطع المتبقية */}
         <div className="flex flex-col gap-1 text-sm">
@@ -195,9 +207,9 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             <span className="text-muted-foreground">يشاهدون الآن</span>
             <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
           </div>
-          <div className="flex items-center gap-2 text-xs text-orange-600">
-            <Flame className="w-3 h-3" />
-            <span>متبقي {remainingStock} قطعة فقط!</span>
+          <div className="flex items-center gap-2 text-xs bg-orange-50 dark:bg-orange-950/20 text-orange-600 px-2 py-1 rounded-md border border-orange-200 dark:border-orange-900">
+            <Flame className="w-3 h-3 animate-pulse" />
+            <span className="font-bold">متبقي {fakeStockLeft} قطعة فقط - اطلب الآن!</span>
           </div>
         </div>
 
@@ -276,6 +288,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       timeLeft={timeLeft}
       viewersCount={viewersCount}
       progressPercentage={progressPercentage}
+      fakeStockLeft={fakeStockLeft}
     />
     </>
   );

@@ -15,6 +15,7 @@ interface ProductModalProps {
   timeLeft: { hours: number; minutes: number; seconds: number };
   viewersCount: number;
   progressPercentage: number;
+  fakeStockLeft: number;
 }
 
 export const ProductModal = ({ 
@@ -23,7 +24,8 @@ export const ProductModal = ({
   onClose,
   timeLeft,
   viewersCount,
-  progressPercentage
+  progressPercentage,
+  fakeStockLeft
 }: ProductModalProps) => {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
@@ -36,7 +38,7 @@ export const ProductModal = ({
     ? Math.round(((product.price - product.discount_price) / product.price) * 100)
     : 0;
 
-  const remainingStock = Math.max(1, Math.floor(viewersCount * 0.3));
+  const remainingStock = fakeStockLeft;
 
   const handleShare = () => {
     const productUrl = `${window.location.origin}/product/${product.id}`;
@@ -58,7 +60,7 @@ export const ProductModal = ({
       ? [{ image_url: product.image_url }] 
       : [];
   
-  const stockQuantity = product.stock_quantity ?? product.stock ?? 0;
+  const stockQuantity = product.stock ?? product.stock_quantity ?? 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -87,25 +89,25 @@ export const ProductModal = ({
             )}
             
             {productImages.length > 1 ? (
-              <Carousel className="w-full">
+              <Carousel className="w-full" opts={{ direction: "rtl" }}>
                 <CarouselContent>
                   {productImages.map((img: any, index: number) => (
                     <CarouselItem key={index}>
                       <img
                         src={img.image_url || "/placeholder.svg"}
-                        alt={`${product.name_ar} - صورة ${index + 1}`}
+                        alt={`${product.name_ar || product.name} - صورة ${index + 1}`}
                         className="w-full h-96 object-cover rounded-lg"
                       />
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="right-2 left-auto" />
-                <CarouselNext className="left-2 right-auto" />
+                <CarouselPrevious className="left-2 right-auto" />
+                <CarouselNext className="right-2 left-auto" />
               </Carousel>
             ) : (
               <img
                 src={productImages[0]?.image_url || "/placeholder.svg"}
-                alt={product.name_ar}
+                alt={product.name_ar || product.name}
                 className="w-full h-96 object-cover rounded-lg"
               />
             )}
@@ -119,25 +121,29 @@ export const ProductModal = ({
             </DialogHeader>
 
             {/* العد التنازلي */}
-            {hasDiscount && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm bg-destructive/10 text-destructive px-3 py-2 rounded-md">
-                  <Clock className="w-4 h-4 animate-pulse" />
-                  <span className="font-bold">
-                    {String(timeLeft.hours).padStart(2, '0')}:
-                    {String(timeLeft.minutes).padStart(2, '0')}:
-                    {String(timeLeft.seconds).padStart(2, '0')}
-                  </span>
-                  <span className="text-xs">ينتهي العرض</span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm bg-destructive/10 text-destructive px-3 py-2 rounded-md">
+                <Clock className="w-4 h-4 animate-pulse" />
+                <span className="font-bold">
+                  {String(timeLeft.hours).padStart(2, '0')}:
+                  {String(timeLeft.minutes).padStart(2, '0')}:
+                  {String(timeLeft.seconds).padStart(2, '0')}
+                </span>
+                <span className="text-xs">ينتهي العرض</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">العرض ينتهي قريباً!</span>
+                  <span className="font-bold text-destructive">{Math.round(progressPercentage)}%</span>
                 </div>
-                <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden border border-destructive/20">
                   <div 
-                    className="h-full bg-gradient-to-r from-destructive to-orange-500 transition-all duration-1000 ease-linear"
+                    className="h-full bg-gradient-to-r from-destructive via-orange-500 to-destructive transition-all duration-1000 ease-linear animate-pulse"
                     style={{ width: `${progressPercentage}%` }}
                   />
                 </div>
               </div>
-            )}
+            </div>
 
             {/* عدد المشاهدين */}
             <div className="flex flex-col gap-1 text-sm">
@@ -147,9 +153,9 @@ export const ProductModal = ({
                 <span className="text-muted-foreground">يشاهدون الآن</span>
                 <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
               </div>
-              <div className="flex items-center gap-2 text-xs text-orange-600">
-                <Flame className="w-3 h-3" />
-                <span>متبقي {remainingStock} قطعة فقط!</span>
+              <div className="flex items-center gap-2 text-xs bg-orange-50 dark:bg-orange-950/20 text-orange-600 px-2 py-1 rounded-md border border-orange-200 dark:border-orange-900">
+                <Flame className="w-3 h-3 animate-pulse" />
+                <span className="font-bold">متبقي {fakeStockLeft} قطعة فقط - اطلب الآن!</span>
               </div>
             </div>
 
