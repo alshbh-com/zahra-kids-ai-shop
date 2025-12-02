@@ -25,17 +25,26 @@ const Home = () => {
         `)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      
+      // ترتيب الصور حسب display_order لكل منتج
+      return data?.map(product => ({
+        ...product,
+        product_images: product.product_images?.sort((a: any, b: any) => 
+          (a.display_order || 0) - (b.display_order || 0)
+        )
+      }));
     },
   });
 
   // تصفية المنتجات حسب البحث والسعر
   const filteredProducts = products?.filter((product) => {
     const matchesSearch = !searchQuery || 
-      product.name_ar.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.name_en?.toLowerCase().includes(searchQuery.toLowerCase());
+      product.name_ar?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.name_en?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.name?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const effectivePrice = product.discount_price || product.price;
+    // استخدام السعر الصحيح: discount_price إذا موجود، وإلا price
+    const effectivePrice = product.discount_price || product.offer_price || product.price;
     const matchesPrice = !maxPrice || effectivePrice <= maxPrice;
     
     return matchesSearch && matchesPrice;

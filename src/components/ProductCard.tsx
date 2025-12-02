@@ -1,13 +1,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useState, useEffect } from "react";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { ProductModal } from "./ProductModal";
 
 interface ProductCardProps {
   product: any;
@@ -19,6 +20,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   
   const inWishlist = isInWishlist(product.id);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const hasDiscount = product.discount_price && product.discount_price < product.price;
   const discountPercentage = hasDiscount
@@ -106,8 +108,13 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   // دعم الكمية من stock_quantity أو stock
   const stockQuantity = product.stock_quantity ?? product.stock ?? 0;
 
+  const handleCardClick = () => {
+    setIsModalOpen(true);
+  };
+
   return (
-    <Card className="group overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer">
+    <>
+      <Card className="group overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer" onClick={handleCardClick}>
       <div className="relative overflow-hidden">
         {hasDiscount && (
           <Badge className="absolute top-2 right-2 z-10 bg-gradient-to-r from-accent to-destructive border-0">
@@ -129,7 +136,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </Button>
         
         {hasMultipleImages ? (
-          <Carousel className="w-full" onClick={() => navigate(`/product/${product.id}`)}>
+          <Carousel className="w-full">
             <CarouselContent>
               {productImages.map((img: any, index: number) => (
                 <CarouselItem key={index}>
@@ -145,13 +152,11 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             <CarouselNext className="left-2 right-auto" />
           </Carousel>
         ) : (
-          <div onClick={() => navigate(`/product/${product.id}`)}>
-            <img
-              src={productImages[0]?.image_url || "/placeholder.svg"}
-              alt={product.name_ar}
-              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-          </div>
+          <img
+            src={productImages[0]?.image_url || "/placeholder.svg"}
+            alt={product.name_ar}
+            className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+          />
         )}
       </div>
       <CardContent className="p-4 space-y-3">
@@ -263,5 +268,15 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         </div>
       </CardContent>
     </Card>
+    
+    <ProductModal 
+      product={product}
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      timeLeft={timeLeft}
+      viewersCount={viewersCount}
+      progressPercentage={progressPercentage}
+    />
+    </>
   );
 };
