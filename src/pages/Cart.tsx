@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -50,8 +50,13 @@ const shippingPrices: Record<string, number> = {
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount } = useCart();
+  const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount, refreshStock } = useCart();
   const [customerName, setCustomerName] = useState("");
+
+  // تحديث المخزون عند فتح السلة
+  useEffect(() => {
+    refreshStock();
+  }, []);
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
