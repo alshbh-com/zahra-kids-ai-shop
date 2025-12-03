@@ -101,7 +101,7 @@ const Cart = () => {
         product_id: item.id,
         quantity: item.quantity,
         price: item.price,
-        product_details: item.name_ar
+        product_details: item.name
       }));
 
       const { error: itemsError } = await supabase
@@ -155,7 +155,7 @@ ${customerEmail ? `📧 البريد: ${customerEmail}\n` : ''}📍 العنوا
 🛒 *تفاصيل الطلب:*
 ━━━━━━━━━━━━━━━━━━
 ${cart.map((item, index) => `
-${index + 1}. *${item.name_ar}*
+${index + 1}. *${item.name}*
    • الكمية: ${item.quantity}
    • السعر للقطعة: ${item.discount_price || item.price} جنيه
    • الإجمالي: ${(item.discount_price || item.price) * item.quantity} جنيه
@@ -209,7 +209,7 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
       notes: notes || null,
       items: cart.map(item => ({
         id: item.id,
-        name_ar: item.name_ar,
+        name: item.name,
         quantity: item.quantity,
         price: item.discount_price || item.price
       })),
@@ -248,11 +248,11 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                     <div className="flex gap-4">
                       <img
                         src={item.image_url || "/placeholder.svg"}
-                        alt={item.name_ar}
+                        alt={item.name}
                         className="w-24 h-24 object-cover rounded-lg"
                       />
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{item.name_ar}</h3>
+                        <h3 className="font-semibold text-lg">{item.name}</h3>
                         <p className="text-sm text-muted-foreground">{item.name_en}</p>
                         <div className="flex items-center gap-4 mt-3">
                           <div className="flex items-center gap-2 border rounded-lg p-1">
