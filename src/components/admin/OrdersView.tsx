@@ -35,7 +35,11 @@ export const OrdersView = () => {
             price,
             size,
             color,
-            product_details
+            product_details,
+            products (
+              name,
+              name_ar
+            )
           )
         `)
         .order("created_at", { ascending: false });
@@ -130,10 +134,12 @@ export const OrdersView = () => {
                       <p className="text-sm font-semibold">المنتجات ({items.length})</p>
                     </div>
                     <div className="divide-y">
-                      {items.map((item: any, index: number) => (
+                      {items.map((item: any, index: number) => {
+                        const productName = item.product_details || item.products?.name_ar || item.products?.name || `منتج ${index + 1}`;
+                        return (
                         <div key={item.id} className="p-3 flex justify-between items-center">
                           <div className="flex-1">
-                            <p className="font-medium">{item.product_details || `منتج ${index + 1}`}</p>
+                            <p className="font-medium">{productName}</p>
                             <div className="flex gap-2 mt-1 flex-wrap">
                               <Badge variant="secondary" className="text-xs">
                                 الكمية: {item.quantity}
@@ -157,7 +163,7 @@ export const OrdersView = () => {
                             {(item.price * item.quantity).toFixed(2)} جنيه
                           </p>
                         </div>
-                      ))}
+                      );})}
                     </div>
                   </div>
 
