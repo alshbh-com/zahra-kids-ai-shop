@@ -3,8 +3,9 @@ import { toast } from 'sonner';
 
 interface CartItem {
   id: string;
-  name_ar: string;
-  name_en: string;
+  name: string;
+  name_ar?: string;
+  name_en?: string;
   price: number;
   discount_price?: number;
   image_url?: string;
@@ -25,7 +26,15 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [items, setItems] = useState<CartItem[]>(() => {
     const saved = localStorage.getItem('cart');
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      // معالجة العناصر القديمة التي قد لا تحتوي على حقل name
+      const parsed = JSON.parse(saved);
+      return parsed.map((item: any) => ({
+        ...item,
+        name: item.name || item.name_ar || 'منتج'
+      }));
+    }
+    return [];
   });
 
   useEffect(() => {
@@ -48,11 +57,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         ...prev,
         {
           id: product.id,
+          name: product.name_ar || product.name || 'منتج',
           name_ar: product.name_ar,
           name_en: product.name_en,
           price: product.price,
           discount_price: product.discount_price,
-          image_url: product.product_images?.[0]?.image_url,
+          image_url: product.product_images?.[0]?.image_url || product.image_url,
           quantity: 1,
         },
       ];
