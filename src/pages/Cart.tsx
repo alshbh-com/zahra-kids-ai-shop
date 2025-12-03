@@ -80,12 +80,12 @@ const Cart = () => {
       
       if (customerError) throw customerError;
 
-      // ثانياً: إنشاء الطلب
+      // ثانياً: إنشاء الطلب - total_amount بدون الشحن
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert([{
           customer_id: customer.id,
-          total_amount: orderData.total,
+          total_amount: orderData.productsTotal, // سعر المنتجات فقط بدون الشحن
           shipping_cost: orderData.shipping,
           notes: orderData.notes,
           order_details: JSON.stringify(orderData.items)
@@ -110,11 +110,27 @@ const Cart = () => {
       
       if (itemsError) throw itemsError;
 
+      // رابعاً: تقليل المخزون من المنتجات
+      for (const item of orderData.items) {
+        const { data: product } = await supabase
+          .from("products")
+          .select("stock")
+          .eq("id", item.id)
+          .single();
+        
+        if (product) {
+          await supabase
+            .from("products")
+            .update({ stock: Math.max(0, (product.stock || 0) - item.quantity) })
+            .eq("id", item.id);
+        }
+      }
+
       return order;
     },
-    onSuccess: (order) => {
-      // عرض صفحة الشكر 3D
+    onSuccess: () => {
       setShowThankYou(true);
+      queryClient.invalidateQueries({ queryKey: ["products"] });
     },
     onError: (error) => {
       console.error("Order error:", error);
@@ -197,7 +213,7 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
         quantity: item.quantity,
         price: item.discount_price || item.price
       })),
-      total: finalTotal,
+      productsTotal: totalAmount, // سعر المنتجات فقط
       shipping: shippingCost
     });
   };
