@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "@/components/ProductCard";
 import { OfferBanner } from "@/components/OfferBanner";
 import { AiChatAssistant } from "@/components/AiChatAssistant";
 import { SearchBar } from "@/components/SearchBar";
-import { Facebook, Instagram } from "lucide-react";
+import { Facebook, Instagram, Ruler, Sparkles } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
 
 const Home = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
 
@@ -118,6 +120,26 @@ const Home = () => {
                 onClick={() => window.open("https://www.instagram.com/zahra19981389?igsh=cnB1MjRwdmowdnQw", "_blank")}
               >
                 <Instagram className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* AI Features Buttons */}
+            <div className="flex items-center gap-3 mt-4">
+              <Button
+                variant="outline"
+                className="rounded-full bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30 hover:border-primary hover:bg-primary/20 transition-all"
+                onClick={() => navigate('/size-detector')}
+              >
+                <Ruler className="w-4 h-4 ml-2" />
+                قياس المقاس AI
+              </Button>
+              <Button
+                variant="outline"
+                className="rounded-full bg-gradient-to-r from-secondary/10 to-accent/10 border-secondary/30 hover:border-secondary hover:bg-secondary/20 transition-all"
+                onClick={() => navigate('/ar-filter')}
+              >
+                <Sparkles className="w-4 h-4 ml-2" />
+                فلتر AR
               </Button>
             </div>
           </div>

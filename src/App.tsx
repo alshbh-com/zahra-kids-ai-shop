@@ -11,9 +11,10 @@ import Wishlist from "./pages/Wishlist";
 import ProductDetail from "./pages/ProductDetail";
 import ShippingPolicy from "./pages/ShippingPolicy";
 import ReturnPolicy from "./pages/ReturnPolicy";
+import SizeDetector from "./pages/SizeDetector";
+import ARPhotoFilter from "./pages/ARPhotoFilter";
 import NotFound from "./pages/NotFound";
 import { BottomNav } from "./components/BottomNav";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -31,6 +32,8 @@ const App = () => (
               <Route path="/wishlist" element={<Wishlist />} />
               <Route path="/shipping-policy" element={<ShippingPolicy />} />
               <Route path="/return-policy" element={<ReturnPolicy />} />
+              <Route path="/size-detector" element={<SizeDetector />} />
+              <Route path="/ar-filter" element={<ARPhotoFilter />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
