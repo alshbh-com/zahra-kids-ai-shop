@@ -1,64 +1,50 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Camera, RotateCcw, Download, Share2, ChevronRight, Sparkles } from 'lucide-react';
+import { Camera, RotateCcw, Download, Share2, ChevronRight, Sparkles, Upload, Shirt, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
-interface Sticker {
+interface Product {
   id: string;
   name: string;
-  emoji: string;
-  x: number;
-  y: number;
-  scale: number;
-  rotation: number;
+  image_url: string | null;
+  price: number;
 }
 
-interface FilterFrame {
-  id: string;
-  name: string;
-  borderColor: string;
-  borderWidth: number;
-  borderRadius: number;
-  overlay?: string;
-}
-
-const AVAILABLE_STICKERS = [
-  { id: 'crown', name: 'تاج', emoji: '👑' },
-  { id: 'heart', name: 'قلب', emoji: '❤️' },
-  { id: 'star', name: 'نجمة', emoji: '⭐' },
-  { id: 'flower', name: 'وردة', emoji: '🌸' },
-  { id: 'butterfly', name: 'فراشة', emoji: '🦋' },
-  { id: 'rainbow', name: 'قوس قزح', emoji: '🌈' },
-  { id: 'sparkle', name: 'لمعة', emoji: '✨' },
-  { id: 'bow', name: 'فيونكة', emoji: '🎀' },
-  { id: 'balloon', name: 'بالون', emoji: '🎈' },
-  { id: 'party', name: 'حفلة', emoji: '🎉' },
-  { id: 'unicorn', name: 'يونيكورن', emoji: '🦄' },
-  { id: 'princess', name: 'أميرة', emoji: '👸' },
-];
-
-const FRAMES: FilterFrame[] = [
-  { id: 'none', name: 'بدون إطار', borderColor: 'transparent', borderWidth: 0, borderRadius: 0 },
-  { id: 'pink', name: 'وردي', borderColor: '#ec4899', borderWidth: 12, borderRadius: 20 },
-  { id: 'gold', name: 'ذهبي', borderColor: '#f59e0b', borderWidth: 12, borderRadius: 20 },
-  { id: 'rainbow', name: 'قوس قزح', borderColor: 'linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff)', borderWidth: 12, borderRadius: 20 },
-  { id: 'hearts', name: 'قلوب', borderColor: '#f43f5e', borderWidth: 16, borderRadius: 30 },
-  { id: 'stars', name: 'نجوم', borderColor: '#8b5cf6', borderWidth: 16, borderRadius: 30 },
-];
+type Step = 'capture' | 'select-product' | 'processing' | 'result';
 
 const ARPhotoFilter = () => {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [step, setStep] = useState<Step>('capture');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [stickers, setStickers] = useState<Sticker[]>([]);
-  const [selectedFrame, setSelectedFrame] = useState<FilterFrame>(FRAMES[0]);
-  const [activeStickerId, setActiveStickerId] = useState<string | null>(null);
+  const [childImage, setChildImage] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch products
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, image_url, price')
+        .not('image_url', 'is', null)
+        .limit(20);
+      
+      if (!error && data) {
+        setProducts(data);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const startCamera = async () => {
     try {
@@ -103,120 +89,84 @@ const ARPhotoFilter = () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     
-    // Mirror the image for selfie camera
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     const imageData = canvas.toDataURL('image/jpeg', 0.9);
-    setCapturedImage(imageData);
+    setChildImage(imageData);
     stopCamera();
-    toast.success('تم التقاط الصورة! أضف الستيكرات والإطارات');
+    setStep('select-product');
+    toast.success('تم التقاط الصورة! اختر المنتج للتجربة');
   };
 
-  const addSticker = (stickerData: typeof AVAILABLE_STICKERS[0]) => {
-    const newSticker: Sticker = {
-      id: `${stickerData.id}-${Date.now()}`,
-      name: stickerData.name,
-      emoji: stickerData.emoji,
-      x: 50,
-      y: 30,
-      scale: 1,
-      rotation: 0,
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('يرجى اختيار صورة');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setChildImage(event.target?.result as string);
+      setStep('select-product');
+      toast.success('تم رفع الصورة! اختر المنتج للتجربة');
     };
-    setStickers([...stickers, newSticker]);
-    setActiveStickerId(newSticker.id);
+    reader.readAsDataURL(file);
   };
 
-  const updateStickerPosition = (id: string, x: number, y: number) => {
-    setStickers(stickers.map(s => s.id === id ? { ...s, x, y } : s));
-  };
+  const processVirtualTryOn = async (product: Product) => {
+    if (!childImage || !product.image_url) return;
 
-  const removeSticker = (id: string) => {
-    setStickers(stickers.filter(s => s.id !== id));
-    setActiveStickerId(null);
-  };
-
-  const handleStickerDrag = (e: React.TouchEvent | React.MouseEvent, stickerId: string) => {
-    if (!containerRef.current) return;
-    
-    const container = containerRef.current.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    
-    const x = ((clientX - container.left) / container.width) * 100;
-    const y = ((clientY - container.top) / container.height) * 100;
-    
-    updateStickerPosition(stickerId, Math.max(0, Math.min(100, x)), Math.max(0, Math.min(100, y)));
-  };
-
-  const exportImage = async () => {
-    if (!capturedImage || !containerRef.current) return;
+    setSelectedProduct(product);
+    setStep('processing');
+    setIsProcessing(true);
 
     try {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = reject;
-        img.src = capturedImage;
+      // Call the AI to overlay the product on the child's image
+      const response = await supabase.functions.invoke('ai-virtual-tryon', {
+        body: {
+          childImage,
+          productImageUrl: product.image_url,
+          productName: product.name
+        }
       });
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-
-      // Draw frame background if selected
-      if (selectedFrame.id !== 'none') {
-        ctx.fillStyle = selectedFrame.borderColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Create clipping path for image
-        const borderW = selectedFrame.borderWidth * 2;
-        ctx.beginPath();
-        ctx.roundRect(borderW, borderW, canvas.width - borderW * 2, canvas.height - borderW * 2, selectedFrame.borderRadius);
-        ctx.clip();
+      if (response.error) {
+        throw new Error(response.error.message);
       }
 
-      ctx.drawImage(img, 0, 0);
-
-      // Draw stickers
-      ctx.font = '80px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      stickers.forEach(sticker => {
-        const x = (sticker.x / 100) * canvas.width;
-        const y = (sticker.y / 100) * canvas.height;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.scale(sticker.scale, sticker.scale);
-        ctx.rotate((sticker.rotation * Math.PI) / 180);
-        ctx.fillText(sticker.emoji, 0, 0);
-        ctx.restore();
-      });
-
-      const dataUrl = canvas.toDataURL('image/png');
-      
-      // Download
-      const link = document.createElement('a');
-      link.download = `zahra-photo-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
-      
-      toast.success('تم حفظ الصورة!');
+      if (response.data?.resultImage) {
+        setResultImage(response.data.resultImage);
+        setStep('result');
+        toast.success('تم تركيب الملابس بنجاح!');
+      } else {
+        throw new Error('لم نحصل على نتيجة');
+      }
     } catch (error) {
-      console.error('Export error:', error);
-      toast.error('حدث خطأ أثناء حفظ الصورة');
+      console.error('Virtual try-on error:', error);
+      toast.error('حدث خطأ أثناء التجربة الافتراضية');
+      setStep('select-product');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const shareImage = async () => {
+  const downloadResult = () => {
+    if (!resultImage) return;
+    
+    const link = document.createElement('a');
+    link.download = `zahra-tryon-${Date.now()}.png`;
+    link.href = resultImage;
+    link.click();
+    toast.success('تم حفظ الصورة!');
+  };
+
+  const shareResult = async () => {
     if (!navigator.share) {
       toast.error('المشاركة غير متاحة على هذا المتصفح');
       return;
@@ -224,8 +174,8 @@ const ARPhotoFilter = () => {
 
     try {
       await navigator.share({
-        title: 'صورتي من متجر زهرة',
-        text: 'شوفوا صورتي الحلوة من متجر زهرة للأطفال! 🎀',
+        title: 'تجربة ملابس من متجر زهرة',
+        text: `جربت ${selectedProduct?.name} من متجر زهرة! 🎀`,
         url: window.location.origin,
       });
     } catch (error) {
@@ -236,10 +186,10 @@ const ARPhotoFilter = () => {
   };
 
   const reset = () => {
-    setCapturedImage(null);
-    setStickers([]);
-    setSelectedFrame(FRAMES[0]);
-    setActiveStickerId(null);
+    setChildImage(null);
+    setSelectedProduct(null);
+    setResultImage(null);
+    setStep('capture');
   };
 
   return (
@@ -251,194 +201,194 @@ const ARPhotoFilter = () => {
           </Button>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
-            فلتر AR زهرة
+            تجربة الملابس الافتراضية
           </h1>
           <div className="w-10" />
         </div>
 
-        <Card className="mb-4 border-primary/20 overflow-hidden">
-          <CardContent className="p-0">
-            <div 
-              ref={containerRef}
-              className="relative aspect-[3/4] bg-muted overflow-hidden"
-              style={{
-                borderWidth: selectedFrame.borderWidth,
-                borderStyle: 'solid',
-                borderColor: selectedFrame.borderColor,
-                borderRadius: selectedFrame.borderRadius,
-                background: selectedFrame.id === 'rainbow' 
-                  ? 'linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff)'
-                  : undefined,
-              }}
-            >
-              {!capturedImage ? (
-                <>
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    className={`w-full h-full object-cover ${isStreaming ? 'block' : 'hidden'}`}
-                    style={{ transform: 'scaleX(-1)' }}
-                  />
-                  {!isStreaming && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
-                      <Camera className="h-20 w-20 mb-4 opacity-50" />
-                      <p className="text-center px-4">
-                        افتح الكاميرا وخذ صورة حلوة!
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <img 
-                    src={capturedImage} 
-                    alt="Captured" 
-                    className="w-full h-full object-cover"
-                  />
-                  {stickers.map(sticker => (
-                    <div
-                      key={sticker.id}
-                      className={`absolute cursor-move select-none transition-transform ${
-                        activeStickerId === sticker.id ? 'ring-2 ring-primary ring-offset-2 scale-110' : ''
-                      }`}
-                      style={{
-                        left: `${sticker.x}%`,
-                        top: `${sticker.y}%`,
-                        transform: `translate(-50%, -50%) scale(${sticker.scale}) rotate(${sticker.rotation}deg)`,
-                        fontSize: '3rem',
-                      }}
-                      onClick={() => setActiveStickerId(sticker.id)}
-                      onTouchMove={(e) => handleStickerDrag(e, sticker.id)}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        setActiveStickerId(sticker.id);
-                        const handleMove = (e: MouseEvent) => {
-                          if (!containerRef.current) return;
-                          const container = containerRef.current.getBoundingClientRect();
-                          const x = ((e.clientX - container.left) / container.width) * 100;
-                          const y = ((e.clientY - container.top) / container.height) * 100;
-                          updateStickerPosition(sticker.id, Math.max(0, Math.min(100, x)), Math.max(0, Math.min(100, y)));
-                        };
-                        const handleUp = () => {
-                          document.removeEventListener('mousemove', handleMove);
-                          document.removeEventListener('mouseup', handleUp);
-                        };
-                        document.addEventListener('mousemove', handleMove);
-                        document.addEventListener('mouseup', handleUp);
-                      }}
-                    >
-                      {sticker.emoji}
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
+        {/* Step 1: Capture/Upload Photo */}
+        {step === 'capture' && (
+          <Card className="mb-4 border-primary/20 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="relative aspect-[3/4] bg-muted overflow-hidden">
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  className={`w-full h-full object-cover ${isStreaming ? 'block' : 'hidden'}`}
+                  style={{ transform: 'scaleX(-1)' }}
+                />
+                {!isStreaming && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">
+                    <Shirt className="h-20 w-20 mb-4 opacity-50" />
+                    <p className="text-center px-4 text-lg font-medium">
+                      صوّر طفلك أو ارفع صورته
+                    </p>
+                    <p className="text-center px-4 text-sm mt-2">
+                      ثم اختر المنتج ليتم تركيبه تلقائياً
+                    </p>
+                  </div>
+                )}
+              </div>
 
-            <canvas ref={canvasRef} className="hidden" />
+              <canvas ref={canvasRef} className="hidden" />
 
-            <div className="p-4">
-              {!capturedImage ? (
-                <div className="flex gap-2">
-                  {!isStreaming ? (
-                    <Button onClick={startCamera} className="flex-1" size="lg">
+              <div className="p-4 space-y-3">
+                {!isStreaming ? (
+                  <>
+                    <Button onClick={startCamera} className="w-full" size="lg">
                       <Camera className="h-5 w-5 ml-2" />
                       فتح الكاميرا
                     </Button>
-                  ) : (
-                    <>
-                      <Button onClick={capturePhoto} className="flex-1" size="lg">
-                        <Camera className="h-5 w-5 ml-2" />
-                        التقاط
-                      </Button>
-                      <Button onClick={stopCamera} variant="outline" size="lg">
-                        إلغاء
-                      </Button>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activeStickerId && (
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">أو</span>
+                      </div>
+                    </div>
                     <Button 
-                      onClick={() => removeSticker(activeStickerId)} 
-                      variant="destructive" 
-                      size="sm"
-                      className="w-full"
+                      onClick={() => fileInputRef.current?.click()} 
+                      variant="outline" 
+                      className="w-full" 
+                      size="lg"
                     >
-                      حذف الستيكر المحدد
+                      <Upload className="h-5 w-5 ml-2" />
+                      رفع صورة من الجهاز
                     </Button>
-                  )}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </>
+                ) : (
                   <div className="flex gap-2">
-                    <Button onClick={exportImage} className="flex-1">
-                      <Download className="h-4 w-4 ml-2" />
-                      حفظ
+                    <Button onClick={capturePhoto} className="flex-1" size="lg">
+                      <Camera className="h-5 w-5 ml-2" />
+                      التقاط
                     </Button>
-                    <Button onClick={shareImage} variant="secondary" className="flex-1">
-                      <Share2 className="h-4 w-4 ml-2" />
-                      مشاركة
-                    </Button>
-                    <Button onClick={reset} variant="outline">
-                      <RotateCcw className="h-4 w-4" />
+                    <Button onClick={stopCamera} variant="outline" size="lg">
+                      إلغاء
                     </Button>
                   </div>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {capturedImage && (
+        {/* Step 2: Select Product */}
+        {step === 'select-product' && childImage && (
           <>
-            <Card className="mb-4">
-              <CardContent className="pt-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  🎨 الإطارات
-                </h3>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {FRAMES.map(frame => (
-                    <button
-                      key={frame.id}
-                      onClick={() => setSelectedFrame(frame)}
-                      className={`flex-shrink-0 w-14 h-14 rounded-lg border-2 transition-all ${
-                        selectedFrame.id === frame.id 
-                          ? 'border-primary scale-110' 
-                          : 'border-muted hover:border-primary/50'
-                      }`}
-                      style={{
-                        background: frame.id === 'none' 
-                          ? 'repeating-conic-gradient(#ccc 0 25%, transparent 0 50%) 50% / 10px 10px'
-                          : frame.id === 'rainbow'
-                          ? 'linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff)'
-                          : frame.borderColor,
-                      }}
-                      title={frame.name}
-                    />
-                  ))}
+            <Card className="mb-4 border-primary/20">
+              <CardContent className="p-2">
+                <div className="relative aspect-[3/4] rounded-lg overflow-hidden">
+                  <img 
+                    src={childImage} 
+                    alt="صورة الطفل" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-2 left-2 right-2">
+                    <Button onClick={reset} variant="secondary" size="sm" className="w-full">
+                      <RotateCcw className="h-4 w-4 ml-2" />
+                      تغيير الصورة
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardContent className="pt-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  ✨ الستيكرات
+                <h3 className="font-semibold mb-3 flex items-center gap-2 text-lg">
+                  <Shirt className="h-5 w-5 text-primary" />
+                  اختر المنتج للتجربة
                 </h3>
-                <div className="grid grid-cols-6 gap-2">
-                  {AVAILABLE_STICKERS.map(sticker => (
-                    <button
-                      key={sticker.id}
-                      onClick={() => addSticker(sticker)}
-                      className="text-2xl p-2 rounded-lg hover:bg-primary/10 transition-colors active:scale-95"
-                      title={sticker.name}
-                    >
-                      {sticker.emoji}
-                    </button>
-                  ))}
-                </div>
+                
+                {products.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-2" />
+                    جاري تحميل المنتجات...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto">
+                    {products.map(product => (
+                      <button
+                        key={product.id}
+                        onClick={() => processVirtualTryOn(product)}
+                        className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all hover:scale-105"
+                      >
+                        <img
+                          src={product.image_url || ''}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1">
+                          <p className="text-white text-xs truncate">{product.name}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </>
+        )}
+
+        {/* Step 3: Processing */}
+        {step === 'processing' && (
+          <Card className="border-primary/20">
+            <CardContent className="py-12">
+              <div className="text-center">
+                <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4 text-primary" />
+                <h3 className="text-xl font-bold mb-2">جاري التجربة الافتراضية...</h3>
+                <p className="text-muted-foreground">
+                  الذكاء الاصطناعي يركب {selectedProduct?.name} على الصورة
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Step 4: Result */}
+        {step === 'result' && resultImage && (
+          <Card className="mb-4 border-primary/20 overflow-hidden">
+            <CardContent className="p-0">
+              <div className="relative aspect-[3/4] bg-muted overflow-hidden">
+                <img 
+                  src={resultImage} 
+                  alt="النتيجة" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="p-4 space-y-3">
+                <div className="flex gap-2">
+                  <Button onClick={downloadResult} className="flex-1">
+                    <Download className="h-4 w-4 ml-2" />
+                    حفظ الصورة
+                  </Button>
+                  <Button onClick={shareResult} variant="secondary" className="flex-1">
+                    <Share2 className="h-4 w-4 ml-2" />
+                    مشاركة
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={() => setStep('select-product')} variant="outline" className="flex-1">
+                    <Shirt className="h-4 w-4 ml-2" />
+                    جرب منتج آخر
+                  </Button>
+                  <Button onClick={reset} variant="ghost">
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>
