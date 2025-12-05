@@ -68,23 +68,48 @@ export const ProductModal = ({
     }
   };
 
+  const [showSelectionStep, setShowSelectionStep] = useState(false);
+  const [pendingGoToCart, setPendingGoToCart] = useState(false);
+
   const handleAddToCart = (goToCart: boolean = false) => {
+    // إذا كان هناك مقاسات أو ألوان متاحة، اظهر خطوة الاختيار أولاً
+    if ((hasSizes || hasColors) && !showSelectionStep) {
+      setShowSelectionStep(true);
+      setPendingGoToCart(goToCart);
+      return;
+    }
+
     // التحقق من اختيار المقاس واللون إذا كانت متاحة
     if (hasSizes && !selectedSize) {
-      toast.error("يرجى اختيار المقاس أولاً");
+      toast.error("⚠️ يرجى اختيار المقاس أولاً", { duration: 3000 });
       return;
     }
     if (hasColors && !selectedColor) {
-      toast.error("يرجى اختيار اللون أولاً");
+      toast.error("⚠️ يرجى اختيار اللون أولاً", { duration: 3000 });
       return;
     }
 
     addToCart(product, selectedSize, selectedColor);
+    setShowSelectionStep(false);
     
-    if (goToCart) {
+    if (goToCart || pendingGoToCart) {
       navigate('/cart');
       onClose();
+    } else {
+      toast.success(`✅ تم إضافة "${product.name_ar}" للسلة${selectedSize ? ` - مقاس: ${selectedSize}` : ''}${selectedColor ? ` - لون: ${selectedColor}` : ''}`);
     }
+  };
+
+  const handleConfirmSelection = () => {
+    if (hasSizes && !selectedSize) {
+      toast.error("⚠️ يرجى اختيار المقاس أولاً", { duration: 3000 });
+      return;
+    }
+    if (hasColors && !selectedColor) {
+      toast.error("⚠️ يرجى اختيار اللون أولاً", { duration: 3000 });
+      return;
+    }
+    handleAddToCart(pendingGoToCart);
   };
 
   const productImages = product.product_images && product.product_images.length > 0 
@@ -107,7 +132,108 @@ export const ProductModal = ({
           <X className="w-5 h-5" />
         </Button>
 
-        <div className="grid md:grid-cols-2 gap-6 pt-8">
+        {/* خطوة اختيار المقاس واللون */}
+        {showSelectionStep && (hasSizes || hasColors) ? (
+          <div className="py-8 px-4 space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-primary mb-2">اختر المقاس واللون</h2>
+              <p className="text-muted-foreground">يرجى اختيار المقاس واللون قبل إضافة المنتج للسلة</p>
+            </div>
+
+            {/* صورة المنتج المصغرة */}
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-xl">
+              <img
+                src={productImages[0]?.image_url || "/placeholder.svg"}
+                alt={product.name_ar || product.name}
+                className="w-20 h-20 object-cover rounded-lg"
+              />
+              <div>
+                <h3 className="font-bold">{product.name_ar}</h3>
+                <p className="text-primary font-bold text-lg">{finalPrice} جنيه</p>
+              </div>
+            </div>
+
+            {/* اختيار المقاس */}
+            {hasSizes && (
+              <div className="space-y-3 p-4 bg-gradient-to-r from-primary/5 to-accent/5 rounded-xl border-2 border-primary/20">
+                <label className="text-lg font-bold flex items-center gap-2">
+                  📏 اختر المقاس <span className="text-destructive text-xl">*</span>
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {sizeOptions.map((size: string) => (
+                    <Button
+                      key={size}
+                      variant={selectedSize === size ? "default" : "outline"}
+                      size="lg"
+                      onClick={() => setSelectedSize(size)}
+                      className={`min-w-[60px] text-lg font-bold transition-all ${
+                        selectedSize === size 
+                          ? "ring-4 ring-primary/50 scale-105 shadow-lg" 
+                          : "hover:scale-105"
+                      }`}
+                    >
+                      {size}
+                    </Button>
+                  ))}
+                </div>
+                {!selectedSize && (
+                  <p className="text-sm text-destructive font-medium animate-pulse">⚠️ المقاس مطلوب</p>
+                )}
+              </div>
+            )}
+
+            {/* اختيار اللون */}
+            {hasColors && (
+              <div className="space-y-3 p-4 bg-gradient-to-r from-accent/5 to-primary/5 rounded-xl border-2 border-accent/20">
+                <label className="text-lg font-bold flex items-center gap-2">
+                  🎨 اختر اللون <span className="text-destructive text-xl">*</span>
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {colorOptions.map((color: string) => (
+                    <Button
+                      key={color}
+                      variant={selectedColor === color ? "default" : "outline"}
+                      size="lg"
+                      onClick={() => setSelectedColor(color)}
+                      className={`min-w-[80px] text-lg font-bold transition-all ${
+                        selectedColor === color 
+                          ? "ring-4 ring-accent/50 scale-105 shadow-lg" 
+                          : "hover:scale-105"
+                      }`}
+                    >
+                      {color}
+                    </Button>
+                  ))}
+                </div>
+                {!selectedColor && (
+                  <p className="text-sm text-destructive font-medium animate-pulse">⚠️ اللون مطلوب</p>
+                )}
+              </div>
+            )}
+
+            {/* أزرار التأكيد */}
+            <div className="flex flex-col gap-3 pt-4">
+              <Button 
+                className="w-full bg-gradient-to-r from-primary to-accent text-lg py-6 font-bold shadow-lg hover:shadow-xl transition-all" 
+                size="lg"
+                onClick={handleConfirmSelection}
+                disabled={stockQuantity === 0 || (hasSizes && !selectedSize) || (hasColors && !selectedColor)}
+              >
+                <ShoppingCart className="w-5 h-5 ml-2" />
+                {pendingGoToCart ? 'تأكيد والذهاب للسلة' : 'تأكيد وإضافة للسلة'}
+              </Button>
+              <Button 
+                variant="outline"
+                size="lg"
+                onClick={() => setShowSelectionStep(false)}
+                className="w-full"
+              >
+                العودة لتفاصيل المنتج
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-6 pt-8">
           {/* الصور */}
           <div className="relative">
             {hasDiscount && (
@@ -289,13 +415,13 @@ export const ProductModal = ({
             {/* الأزرار */}
             <div className="flex flex-col gap-2 pt-4">
               <Button 
-                className="w-full bg-gradient-to-r from-primary to-accent" 
+                className="w-full bg-gradient-to-r from-primary to-accent shadow-lg hover:shadow-xl transition-all" 
                 size="lg"
                 onClick={() => handleAddToCart(true)}
                 disabled={stockQuantity === 0}
               >
                 <ShoppingCart className="w-5 h-5 ml-2" />
-                {stockQuantity === 0 ? 'نفذت الكمية' : 'اضغط للشراء'}
+                {stockQuantity === 0 ? 'نفذت الكمية' : '🛒 اضغط للشراء'}
               </Button>
               <div className="flex gap-2">
                 <Button 
@@ -325,6 +451,7 @@ export const ProductModal = ({
             </div>
           </div>
         </div>
+        )}
       </DialogContent>
     </Dialog>
   );

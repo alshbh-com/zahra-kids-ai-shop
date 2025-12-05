@@ -44,8 +44,10 @@ All colors MUST be HSL.
     
     --shadow-soft: 0 4px 20px -4px hsl(340 75% 55% / 0.15);
     --shadow-card: 0 8px 30px -6px hsl(340 50% 40% / 0.2);
+    --shadow-glow: 0 0 30px hsl(340 75% 55% / 0.3);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 98%;
 
