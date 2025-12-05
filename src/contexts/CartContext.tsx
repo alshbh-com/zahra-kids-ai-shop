@@ -12,13 +12,16 @@ interface CartItem {
   image_url?: string;
   quantity: number;
   maxStock?: number;
+  selectedSize?: string;
+  selectedColor?: string;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: any) => Promise<void>;
+  addToCart: (product: any, size?: string, color?: string) => Promise<void>;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => Promise<void>;
+  updateItemOptions: (id: string, size?: string, color?: string) => void;
   clearCart: () => void;
   totalAmount: number;
   refreshStock: () => Promise<void>;
@@ -81,7 +84,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addToCart = async (product: any) => {
+  const addToCart = async (product: any, size?: string, color?: string) => {
     const currentStock = await getProductStock(product.id);
     
     if (currentStock <= 0) {
@@ -89,8 +92,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
+    // حساب السعر النهائي مع دعم العروض
+    const isOffer = product.is_offer && product.offer_price && product.offer_price < product.price;
+    const finalPrice = isOffer ? product.offer_price : (product.discount_price || product.price);
+
     setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      // البحث عن منتج بنفس ID والمقاس واللون
+      const existing = prev.find(
+        (item) => item.id === product.id && 
+                  item.selectedSize === size && 
+                  item.selectedColor === color
+      );
       
       if (existing) {
         if (existing.quantity >= currentStock) {
@@ -99,7 +111,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
         toast.success('تم زيادة الكمية');
         return prev.map((item) =>
-          item.id === product.id
+          item.id === product.id && item.selectedSize === size && item.selectedColor === color
             ? { ...item, quantity: item.quantity + 1, maxStock: currentStock }
             : item
         );
@@ -114,10 +126,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           name_ar: product.name_ar,
           name_en: product.name_en,
           price: product.price,
-          discount_price: product.discount_price,
+          discount_price: finalPrice,
           image_url: product.product_images?.[0]?.image_url || product.image_url,
           quantity: 1,
           maxStock: currentStock,
+          selectedSize: size,
+          selectedColor: color,
         },
       ];
     });
@@ -149,6 +163,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const updateItemOptions = (id: string, size?: string, color?: string) => {
+    setItems((prev) =>
+      prev.map((item) => 
+        item.id === id 
+          ? { ...item, selectedSize: size || item.selectedSize, selectedColor: color || item.selectedColor } 
+          : item
+      )
+    );
+  };
+
   const clearCart = () => {
     setItems([]);
     localStorage.removeItem('cart');
@@ -162,7 +186,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <CartContext.Provider
-      value={{ items, addToCart, removeFromCart, updateQuantity, clearCart, totalAmount, refreshStock }}
+      value={{ items, addToCart, removeFromCart, updateQuantity, updateItemOptions, clearCart, totalAmount, refreshStock }}
     >
       {children}
     </CartContext.Provider>

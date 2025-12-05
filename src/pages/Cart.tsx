@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Minus, Plus, Trash2, ShoppingBag, Package, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
@@ -100,13 +101,15 @@ const Cart = () => {
       
       if (orderError) throw orderError;
 
-      // ثالثاً: إنشاء order_items
+      // ثالثاً: إنشاء order_items مع المقاس واللون
       const orderItems = orderData.items.map((item: any) => ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
         price: item.price,
-        product_details: item.name
+        size: item.selectedSize || null,
+        color: item.selectedColor || null,
+        product_details: `${item.name}${item.selectedSize ? ` - مقاس: ${item.selectedSize}` : ''}${item.selectedColor ? ` - لون: ${item.selectedColor}` : ''}`
       }));
 
       const { error: itemsError } = await supabase
@@ -144,7 +147,16 @@ const Cart = () => {
   });
 
   const handleThankYouComplete = () => {
-    // بعد 5 ثواني، افتح واتساب برسالة منظمة
+    // بناء تفاصيل المنتجات مع المقاس واللون
+    const itemsDetails = cart.map((item, index) => {
+      let details = `${index + 1}. *${item.name}*\n   • الكمية: ${item.quantity}`;
+      if (item.selectedSize) details += `\n   • المقاس: ${item.selectedSize}`;
+      if (item.selectedColor) details += `\n   • اللون: ${item.selectedColor}`;
+      details += `\n   • السعر للقطعة: ${item.discount_price || item.price} جنيه`;
+      details += `\n   • الإجمالي: ${(item.discount_price || item.price) * item.quantity} جنيه`;
+      return details;
+    }).join('\n');
+
     const message = `
 ═══════════════════════
 🛍️ *طلب جديد من متجر زهرة* 🛍️
@@ -159,12 +171,7 @@ ${customerEmail ? `📧 البريد: ${customerEmail}\n` : ''}📍 العنوا
 
 🛒 *تفاصيل الطلب:*
 ━━━━━━━━━━━━━━━━━━
-${cart.map((item, index) => `
-${index + 1}. *${item.name}*
-   • الكمية: ${item.quantity}
-   • السعر للقطعة: ${item.discount_price || item.price} جنيه
-   • الإجمالي: ${(item.discount_price || item.price) * item.quantity} جنيه
-`).join('')}
+${itemsDetails}
 
 💰 *الملخص المالي:*
 ━━━━━━━━━━━━━━━━━━
@@ -216,7 +223,9 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
         id: item.id,
         name: item.name,
         quantity: item.quantity,
-        price: item.discount_price || item.price
+        price: item.discount_price || item.price,
+        selectedSize: item.selectedSize,
+        selectedColor: item.selectedColor
       })),
       productsTotal: totalAmount, // سعر المنتجات فقط
       shipping: shippingCost
@@ -248,7 +257,7 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
               </Card>
             ) : (
               cart.map((item) => (
-                <Card key={item.id}>
+                <Card key={`${item.id}-${item.selectedSize}-${item.selectedColor}`}>
                   <CardContent className="p-4">
                     <div className="flex gap-4">
                       <img
@@ -259,6 +268,21 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{item.name}</h3>
                         <p className="text-sm text-muted-foreground">{item.name_en}</p>
+                        
+                        {/* عرض المقاس واللون المختارين */}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {item.selectedSize && (
+                            <Badge variant="secondary" className="text-xs">
+                              المقاس: {item.selectedSize}
+                            </Badge>
+                          )}
+                          {item.selectedColor && (
+                            <Badge variant="secondary" className="text-xs">
+                              اللون: {item.selectedColor}
+                            </Badge>
+                          )}
+                        </div>
+                        
                         <div className="flex items-center gap-4 mt-3">
                           <div className="flex items-center gap-2 border rounded-lg p-1">
                             <Button

@@ -42,7 +42,18 @@ serve(async (req) => {
             content: [
               {
                 type: "text",
-                text: `You are a virtual try-on AI. Take the clothing item from the second image (${productName}) and realistically overlay it onto the child in the first image. Make it look natural as if the child is wearing the clothes. Keep the child's face, pose, and background intact. The clothing should fit proportionally to the child's body.`
+                text: `You are an expert virtual clothing try-on AI for children's fashion. Your task:
+
+1. ANALYZE the first image: Identify the child's body, pose, and proportions
+2. EXTRACT the clothing item from the second image (${productName}): Focus only on the garment, ignore any background or model
+3. TRANSFORM and FIT: Resize, rotate, and warp the extracted clothing to match the child's body position and proportions
+4. COMPOSITE: Place the clothing naturally on the child, ensuring:
+   - Proper layering (arms in front if needed)
+   - Realistic shadows and lighting matching the original photo
+   - The child's face, hair, and background remain completely unchanged
+   - The clothing fits naturally as if the child is actually wearing it
+
+Output a single realistic image of the child wearing the clothing item. The result should look like a real photograph, not a collage.`
               },
               {
                 type: "image_url",

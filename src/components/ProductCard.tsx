@@ -22,9 +22,13 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const inWishlist = isInWishlist(product.id);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  const hasDiscount = product.discount_price && product.discount_price < product.price;
+  // دعم العروض: is_offer مع offer_price أو discount_price
+  const isOffer = product.is_offer && product.offer_price && product.offer_price < product.price;
+  const hasDiscount = (product.discount_price && product.discount_price < product.price) || isOffer;
+  const finalPrice = isOffer ? product.offer_price : (product.discount_price || product.price);
+  const originalPrice = product.price;
   const discountPercentage = hasDiscount
-    ? Math.round(((product.price - product.discount_price) / product.price) * 100)
+    ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
     : 0;
 
   // أعداد وهمية للمشاهدين (عشوائية بين 300-800)
@@ -125,8 +129,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
       <Card className="group overflow-hidden hover:shadow-[var(--shadow-card)] transition-all duration-300 animate-in fade-in slide-in-from-bottom-4 cursor-pointer" onClick={handleCardClick}>
       <div className="relative overflow-hidden">
         {hasDiscount && (
-          <Badge className="absolute top-2 right-2 z-10 bg-gradient-to-r from-accent to-destructive border-0">
-            خصم {discountPercentage}%
+          <Badge className="absolute top-2 right-2 z-10 bg-gradient-to-r from-accent to-destructive border-0 text-sm px-2 py-1">
+            {isOffer ? '🔥 عرض خاص' : 'خصم'} {discountPercentage}%
           </Badge>
         )}
         {product.is_featured && (
@@ -221,15 +225,20 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {hasDiscount && (
-            <span className="text-sm text-muted-foreground line-through">
-              {product.price} جنيه
+            <span className="text-sm text-muted-foreground line-through decoration-2">
+              {originalPrice} جنيه
             </span>
           )}
-          <span className="text-xl font-bold text-primary">
-            {hasDiscount ? product.discount_price : product.price} جنيه
+          <span className={`text-xl font-bold ${hasDiscount ? 'text-destructive' : 'text-primary'}`}>
+            {finalPrice} جنيه
           </span>
+          {isOffer && (
+            <Badge className="bg-destructive/20 text-destructive border-destructive text-xs">
+              وفّر {originalPrice - finalPrice} جنيه
+            </Badge>
+          )}
         </div>
 
         {stockQuantity <= (product.low_stock_threshold || 5) && stockQuantity > 0 && (
