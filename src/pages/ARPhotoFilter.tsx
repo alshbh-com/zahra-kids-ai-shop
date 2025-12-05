@@ -48,8 +48,9 @@ const ARPhotoFilter = () => {
 
   const startCamera = async () => {
     try {
+      // استخدام الكاميرا الخلفية بدلاً من الأمامية
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } }
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 720 }, height: { ideal: 960 } }
       });
       
       if (videoRef.current) {
@@ -89,10 +90,8 @@ const ARPhotoFilter = () => {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     
-    ctx.translate(canvas.width, 0);
-    ctx.scale(-1, 1);
+    // رسم الصورة مباشرة بدون انعكاس (الكاميرا الخلفية)
     ctx.drawImage(video, 0, 0);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
     const imageData = canvas.toDataURL('image/jpeg', 0.9);
     setChildImage(imageData);
@@ -216,7 +215,6 @@ const ARPhotoFilter = () => {
                   autoPlay
                   playsInline
                   className={`w-full h-full object-cover ${isStreaming ? 'block' : 'hidden'}`}
-                  style={{ transform: 'scaleX(-1)' }}
                 />
                 {!isStreaming && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground">

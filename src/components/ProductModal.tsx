@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,14 +32,27 @@ export const ProductModal = ({
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const navigate = useNavigate();
   
+  const [selectedSize, setSelectedSize] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
+  
   const inWishlist = isInWishlist(product.id);
   
-  const hasDiscount = product.discount_price && product.discount_price < product.price;
+  // دعم العروض
+  const isOffer = product.is_offer && product.offer_price && product.offer_price < product.price;
+  const hasDiscount = (product.discount_price && product.discount_price < product.price) || isOffer;
+  const finalPrice = isOffer ? product.offer_price : (product.discount_price || product.price);
+  const originalPrice = product.price;
   const discountPercentage = hasDiscount
-    ? Math.round(((product.price - product.discount_price) / product.price) * 100)
+    ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
     : 0;
 
   const remainingStock = fakeStockLeft;
+
+  // المقاسات والألوان من المنتج
+  const sizeOptions = product.size_options || [];
+  const colorOptions = product.color_options || [];
+  const hasSizes = sizeOptions.length > 0;
+  const hasColors = colorOptions.length > 0;
 
   const handleShare = () => {
     const productUrl = `${window.location.origin}/product/${product.id}`;
@@ -51,6 +65,25 @@ export const ProductModal = ({
       removeFromWishlist(product.id);
     } else {
       addToWishlist(product);
+    }
+  };
+
+  const handleAddToCart = (goToCart: boolean = false) => {
+    // التحقق من اختيار المقاس واللون إذا كانت متاحة
+    if (hasSizes && !selectedSize) {
+      toast.error("يرجى اختيار المقاس أولاً");
+      return;
+    }
+    if (hasColors && !selectedColor) {
+      toast.error("يرجى اختيار اللون أولاً");
+      return;
+    }
+
+    addToCart(product, selectedSize, selectedColor);
+    
+    if (goToCart) {
+      navigate('/cart');
+      onClose();
     }
   };
 
@@ -78,8 +111,8 @@ export const ProductModal = ({
           {/* الصور */}
           <div className="relative">
             {hasDiscount && (
-              <Badge className="absolute top-2 right-2 z-10 bg-gradient-to-r from-accent to-destructive border-0">
-                خصم {discountPercentage}%
+              <Badge className="absolute top-2 right-2 z-10 bg-gradient-to-r from-accent to-destructive border-0 text-sm px-3 py-1">
+                {isOffer ? '🔥 عرض خاص' : 'خصم'} {discountPercentage}%
               </Badge>
             )}
             {product.is_featured && (
@@ -169,16 +202,71 @@ export const ProductModal = ({
             )}
 
             {/* السعر */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               {hasDiscount && (
-                <span className="text-lg text-muted-foreground line-through">
-                  {product.price} جنيه
+                <span className="text-lg text-muted-foreground line-through decoration-2">
+                  {originalPrice} جنيه
                 </span>
               )}
-              <span className="text-3xl font-bold text-primary">
-                {hasDiscount ? product.discount_price : product.price} جنيه
+              <span className={`text-3xl font-bold ${hasDiscount ? 'text-destructive' : 'text-primary'}`}>
+                {finalPrice} جنيه
               </span>
+              {isOffer && (
+                <Badge className="bg-destructive/20 text-destructive border-destructive">
+                  وفّر {originalPrice - finalPrice} جنيه
+                </Badge>
+              )}
             </div>
+
+            {/* اختيار المقاس */}
+            {hasSizes && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold flex items-center gap-1">
+                  المقاس <span className="text-destructive">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {sizeOptions.map((size: string) => (
+                    <Button
+                      key={size}
+                      variant={selectedSize === size ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedSize(size)}
+                      className={selectedSize === size ? "ring-2 ring-primary" : ""}
+                    >
+                      {size}
+                    </Button>
+                  ))}
+                </div>
+                {!selectedSize && (
+                  <p className="text-xs text-destructive">يرجى اختيار المقاس</p>
+                )}
+              </div>
+            )}
+
+            {/* اختيار اللون */}
+            {hasColors && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold flex items-center gap-1">
+                  اللون <span className="text-destructive">*</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {colorOptions.map((color: string) => (
+                    <Button
+                      key={color}
+                      variant={selectedColor === color ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedColor(color)}
+                      className={selectedColor === color ? "ring-2 ring-primary" : ""}
+                    >
+                      {color}
+                    </Button>
+                  ))}
+                </div>
+                {!selectedColor && (
+                  <p className="text-xs text-destructive">يرجى اختيار اللون</p>
+                )}
+              </div>
+            )}
 
             {/* الكمية */}
             {stockQuantity <= (product.low_stock_threshold || 5) && stockQuantity > 0 && (
@@ -203,11 +291,7 @@ export const ProductModal = ({
               <Button 
                 className="w-full bg-gradient-to-r from-primary to-accent" 
                 size="lg"
-                onClick={() => {
-                  addToCart(product);
-                  navigate('/cart');
-                  onClose();
-                }}
+                onClick={() => handleAddToCart(true)}
                 disabled={stockQuantity === 0}
               >
                 <ShoppingCart className="w-5 h-5 ml-2" />
@@ -218,10 +302,7 @@ export const ProductModal = ({
                   className="flex-1" 
                   size="lg"
                   variant="outline"
-                  onClick={() => {
-                    addToCart(product);
-                    toast.success("تم إضافة المنتج للسلة");
-                  }}
+                  onClick={() => handleAddToCart(false)}
                   disabled={stockQuantity === 0}
                 >
                   وضع في السلة
