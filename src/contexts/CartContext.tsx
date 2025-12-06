@@ -14,6 +14,8 @@ interface CartItem {
   maxStock?: number;
   selectedSize?: string;
   selectedColor?: string;
+  size_options?: string[];
+  color_options?: string[];
 }
 
 interface CartContextType {
@@ -132,6 +134,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           maxStock: currentStock,
           selectedSize: size,
           selectedColor: color,
+          size_options: product.size_options || [],
+          color_options: product.color_options || [],
         },
       ];
     });
