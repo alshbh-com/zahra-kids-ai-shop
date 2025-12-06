@@ -15,7 +15,7 @@ import { ThankYou3D } from "@/components/ThankYou3D";
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount, refreshStock } = useCart();
+  const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount, refreshStock, updateItemOptions } = useCart();
   const [customerName, setCustomerName] = useState("");
 
   // تحديث المخزون عند فتح السلة
@@ -196,6 +196,18 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
       return;
     }
 
+    // التحقق من اختيار المقاس واللون لكل منتج
+    const missingSelections = cart.filter(item => {
+      const hasSizes = item.size_options && item.size_options.length > 0;
+      const hasColors = item.color_options && item.color_options.length > 0;
+      return (hasSizes && !item.selectedSize) || (hasColors && !item.selectedColor);
+    });
+
+    if (missingSelections.length > 0) {
+      toast.error(`⚠️ يرجى اختيار المقاس واللون لجميع المنتجات قبل إتمام الطلب`);
+      return;
+    }
+
     createOrderMutation.mutate({
       customerName,
       customerPhone,
@@ -252,19 +264,74 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                         <h3 className="font-semibold text-lg">{item.name}</h3>
                         <p className="text-sm text-muted-foreground">{item.name_en}</p>
                         
-                        {/* عرض المقاس واللون المختارين */}
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {item.selectedSize && (
-                            <Badge variant="secondary" className="text-xs">
-                              المقاس: {item.selectedSize}
-                            </Badge>
+                        {/* اختيار المقاس واللون - إجباري */}
+                        <div className="flex flex-wrap gap-3 mt-3">
+                          {/* المقاس */}
+                          {item.size_options && item.size_options.length > 0 && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs font-semibold flex items-center gap-1">
+                                المقاس <span className="text-destructive">*</span>
+                              </label>
+                              <div className="flex flex-wrap gap-1">
+                                {item.size_options.map((size: string) => (
+                                  <Button
+                                    key={size}
+                                    variant={item.selectedSize === size ? "default" : "outline"}
+                                    size="sm"
+                                    className={`h-7 px-2 text-xs ${item.selectedSize === size ? "ring-2 ring-primary" : ""}`}
+                                    onClick={() => updateItemOptions(item.id, size, item.selectedColor)}
+                                  >
+                                    {size}
+                                  </Button>
+                                ))}
+                              </div>
+                              {!item.selectedSize && (
+                                <p className="text-xs text-destructive animate-pulse">⚠️ اختر المقاس</p>
+                              )}
+                            </div>
                           )}
-                          {item.selectedColor && (
-                            <Badge variant="secondary" className="text-xs">
-                              اللون: {item.selectedColor}
-                            </Badge>
+                          
+                          {/* اللون */}
+                          {item.color_options && item.color_options.length > 0 && (
+                            <div className="flex flex-col gap-1">
+                              <label className="text-xs font-semibold flex items-center gap-1">
+                                اللون <span className="text-destructive">*</span>
+                              </label>
+                              <div className="flex flex-wrap gap-1">
+                                {item.color_options.map((color: string) => (
+                                  <Button
+                                    key={color}
+                                    variant={item.selectedColor === color ? "default" : "outline"}
+                                    size="sm"
+                                    className={`h-7 px-2 text-xs ${item.selectedColor === color ? "ring-2 ring-primary" : ""}`}
+                                    onClick={() => updateItemOptions(item.id, item.selectedSize, color)}
+                                  >
+                                    {color}
+                                  </Button>
+                                ))}
+                              </div>
+                              {!item.selectedColor && (
+                                <p className="text-xs text-destructive animate-pulse">⚠️ اختر اللون</p>
+                              )}
+                            </div>
                           )}
                         </div>
+                        
+                        {/* عرض الاختيارات الحالية */}
+                        {(item.selectedSize || item.selectedColor) && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {item.selectedSize && (
+                              <Badge variant="secondary" className="text-xs bg-primary/10">
+                                المقاس: {item.selectedSize}
+                              </Badge>
+                            )}
+                            {item.selectedColor && (
+                              <Badge variant="secondary" className="text-xs bg-primary/10">
+                                اللون: {item.selectedColor}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                         
                         <div className="flex items-center gap-4 mt-3">
                           <div className="flex items-center gap-2 border rounded-lg p-1">
