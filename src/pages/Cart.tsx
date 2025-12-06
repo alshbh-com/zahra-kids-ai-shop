@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,42 +12,6 @@ import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { useNavigate } from "react-router-dom";
 import { ThankYou3D } from "@/components/ThankYou3D";
-
-const shippingPrices: Record<string, number> = {
-  "القاهرة": 55,
-  "الجيزة": 55,
-  "القليوبية": 60,
-  "الغربية": 65,
-  "المنوفية": 65,
-  "كفر الشيخ": 65,
-  "الإسكندرية": 65,
-  "الدقهلية": 65,
-  "المنصورة": 65,
-  "أجا": 65,
-  "السنبلاوين": 65,
-  "دمياط": 65,
-  "الشرقية": 65,
-  "بورسعيد": 65,
-  "الإسماعيلية": 65,
-  "السويس": 65,
-  "الفيوم": 65,
-  "البحيرة": 75,
-  "بني سويف": 70,
-  "المنيا": 70,
-  "مرسى مطروح": 80,
-  "البحر الأحمر": 85,
-  "سوهاج": 70,
-  "أسيوط": 70,
-  "قنا": 70,
-  "الغردقة": 85,
-  "الأقصر": 70,
-  "أسوان": 70,
-  "الوادي الجديد": 85,
-  "شمال سيناء": 100,
-  "جنوب سيناء": 100,
-  "الساحل الشمالي": 85,
-  "برج العرب": 70,
-};
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -64,6 +28,25 @@ const Cart = () => {
   const [notes, setNotes] = useState("");
   const [selectedGovernorate, setSelectedGovernorate] = useState("");
   const [showThankYou, setShowThankYou] = useState(false);
+
+  // جلب المحافظات من قاعدة البيانات
+  const { data: governorates = [] } = useQuery({
+    queryKey: ["governorates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("governorates")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // إنشاء خريطة أسعار الشحن من قاعدة البيانات
+  const shippingPrices: Record<string, number> = governorates.reduce((acc: Record<string, number>, gov) => {
+    acc[gov.name] = gov.shipping_cost;
+    return acc;
+  }, {});
 
   const shippingCost = selectedGovernorate ? shippingPrices[selectedGovernorate] || 0 : 0;
   const finalTotal = totalAmount + shippingCost;
@@ -365,9 +348,9 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                       <SelectValue placeholder="اختر المحافظة" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.keys(shippingPrices).sort().map((gov) => (
-                        <SelectItem key={gov} value={gov}>
-                          {gov} - {shippingPrices[gov]} جنيه
+                      {governorates.map((gov) => (
+                        <SelectItem key={gov.id} value={gov.name}>
+                          {gov.name} - {gov.shipping_cost} جنيه
                         </SelectItem>
                       ))}
                     </SelectContent>
