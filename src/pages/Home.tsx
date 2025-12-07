@@ -186,6 +186,54 @@ const Home = () => {
             </div>
           )}
         </div>
+
+        {/* About Us Section */}
+        <div className="bg-card rounded-2xl p-6 shadow-lg border border-border/50">
+          <h2 className="text-2xl font-bold mb-4 text-center">من نحن 🏭</h2>
+          <div className="text-muted-foreground leading-relaxed text-center space-y-4">
+            <p>
+              في <span className="text-primary font-bold">zahra.ink</span> بنقدملك تجربة تسوّق مختلفة تمامًا عن أي مكان تاني.
+            </p>
+            <p>
+              إحنا مش مجرد وسيط أو تاجر تجزئة، إحنا بنشتغل مباشرة مع المصانع علشان نوفّرلك الملابس بأعلى جودة وبسعر المصنع من غير أي زيادة.
+            </p>
+            <p>
+              الملابس اللي عندنا بتيجي مباشرة من خطوط الإنتاج، يعني نفس القطع اللي بتخرج من المصنع بتكون جاهزة ليك على طول — من غير وسطاء، من غير عمولات، ومن غير أسعار مبالغ فيها.
+            </p>
+            <p>
+              هدفنا إن كل عميل يقدر يشتري لبس أنيق بجودة ممتازة وسعر عادل.
+            </p>
+            <p className="text-foreground font-semibold">
+              اختيارك لينا معناه إنك بتتعامل مع مصدر موثوق بيقدّم القيمة الحقيقية للمنتج. ✨
+            </p>
+          </div>
+        </div>
+
+        {/* Customer Service Section */}
+        <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 rounded-2xl p-6 shadow-lg border border-primary/20">
+          <h2 className="text-2xl font-bold mb-4 text-center">خدمة العملاء 📞</h2>
+          <p className="text-muted-foreground text-center mb-4">للاستفسارات والمساعدة، تواصل معنا على:</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a 
+              href="tel:01033050236" 
+              className="flex items-center gap-2 bg-card px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-105 border border-border"
+            >
+              <span className="text-lg font-bold text-primary">01033050236</span>
+              <svg className="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+              </svg>
+            </a>
+            <a 
+              href="tel:01002989846" 
+              className="flex items-center gap-2 bg-card px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-105 border border-border"
+            >
+              <span className="text-lg font-bold text-primary">01002989846</span>
+              <svg className="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+              </svg>
+            </a>
+          </div>
+        </div>
       </div>
 
       {/* AI Chat Assistant */}
