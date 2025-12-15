@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
 import { useNavigate } from "react-router-dom";
 import { ThankYou3D } from "@/components/ThankYou3D";
+import { CartSuggestion } from "@/components/CartSuggestion";
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -391,6 +392,11 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                   </CardContent>
                 </Card>
               ))
+            )}
+
+            {/* اقتراح منتج */}
+            {cart.length > 0 && (
+              <CartSuggestion cartProductIds={cart.map(item => item.id)} />
             )}
           </div>
 
