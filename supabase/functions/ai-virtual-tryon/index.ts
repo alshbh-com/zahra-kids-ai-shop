@@ -59,7 +59,7 @@ serve(async (req) => {
     const productContentType = productResponse.headers.get("content-type") || "image/jpeg";
 
     // Call Gemini API with image generation capability
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp-image-generation:generateContent?key=${GEMINI_API_KEY}`;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-06-05:generateContent?key=${GEMINI_API_KEY}`;
 
     const prompt = `You are an expert virtual clothing try-on AI for children's fashion. Your task:
 
