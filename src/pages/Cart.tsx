@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useNavigate } from "react-router-dom";
 import { ThankYou3D } from "@/components/ThankYou3D";
 import { CartSuggestion } from "@/components/CartSuggestion";
+import { ExitRescueModal } from "@/components/ExitRescueModal";
 
 const Cart = () => {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ const Cart = () => {
   const [selectedGovernorate, setSelectedGovernorate] = useState("");
   const [showThankYou, setShowThankYou] = useState(false);
   const [wheelDiscount, setWheelDiscount] = useState<{discount: number, minOrder: number} | null>(null);
+  const [exitDiscount, setExitDiscount] = useState(0); // خصم الخروج الحقيقي 2%
 
   // Check for wheel discount
   useEffect(() => {
@@ -66,7 +68,14 @@ const Cart = () => {
   
   // Calculate wheel discount
   const appliedWheelDiscount = wheelDiscount && totalAmount >= wheelDiscount.minOrder ? wheelDiscount.discount : 0;
-  const finalTotal = totalAmount + shippingCost - appliedWheelDiscount;
+  // Calculate exit rescue discount (real 2%)
+  const appliedExitDiscount = exitDiscount > 0 ? Math.round(totalAmount * 0.02) : 0;
+  const finalTotal = totalAmount + shippingCost - appliedWheelDiscount - appliedExitDiscount;
+
+  // Handle exit rescue discount acceptance
+  const handleExitDiscountAccept = () => {
+    setExitDiscount(2); // تفعيل خصم 2% الحقيقي
+  };
 
   const queryClient = useQueryClient();
 
@@ -176,7 +185,7 @@ ${itemsDetails}
 💰 *الملخص المالي:*
 ━━━━━━━━━━━━━━━━━━
 • المنتجات: ${totalAmount} جنيه
-• الشحن: ${shippingCost} جنيه${appliedWheelDiscount > 0 ? `\n• 🎁 خصم عجلة الحظ: -${appliedWheelDiscount} جنيه` : ''}
+• الشحن: ${shippingCost} جنيه${appliedWheelDiscount > 0 ? `\n• 🎁 خصم عجلة الحظ: -${appliedWheelDiscount} جنيه` : ''}${appliedExitDiscount > 0 ? `\n• 🎁 خصم خاص: -${appliedExitDiscount} جنيه` : ''}
 • *الإجمالي النهائي: ${finalTotal} جنيه* 💵
 
 ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
@@ -255,6 +264,12 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background pb-24">
+      {/* Exit Rescue Modal */}
+      <ExitRescueModal 
+        onAcceptDiscount={handleExitDiscountAccept} 
+        cartHasItems={cart.length > 0} 
+      />
+      
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
           <ShoppingBag className="w-8 h-8 text-primary" />
@@ -487,6 +502,12 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                       <div className="flex justify-between text-base text-green-600">
                         <span>🎁 خصم عجلة الحظ:</span>
                         <span>-{appliedWheelDiscount} جنيه</span>
+                      </div>
+                    )}
+                    {appliedExitDiscount > 0 && (
+                      <div className="flex justify-between text-base text-green-600">
+                        <span>🎁 خصم خاص:</span>
+                        <span>-{appliedExitDiscount} جنيه</span>
                       </div>
                     )}
                     {wheelDiscount && totalAmount < wheelDiscount.minOrder && (
