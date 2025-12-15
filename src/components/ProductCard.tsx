@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart } from "lucide-react";
+import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart, Award, Gift, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
@@ -120,6 +120,16 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   // دعم الكمية من stock أو stock_quantity (نبدأ بـ stock أولاً)
   const stockQuantity = product.stock ?? product.stock_quantity ?? 0;
 
+  // === الشارات الذكية ===
+  // 🔥 الأكثر مبيعاً - إذا كان عدد المراجعات > 10
+  const isBestSeller = (product.reviews_count || 0) > 10;
+  // ⭐ تقييم عالي - إذا كان التقييم >= 4.5
+  const isHighRated = (product.rating || 0) >= 4.5;
+  // ⏳ محدود - إذا كان المخزون أقل من 10
+  const isLimited = stockQuantity > 0 && stockQuantity <= 10;
+  // 🎁 مناسب هدية - إذا كان السعر بين 100 و 500 جنيه
+  const isGiftSuitable = finalPrice >= 100 && finalPrice <= 500;
+
   const handleCardClick = () => {
     setIsModalOpen(true);
   };
@@ -133,6 +143,31 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             {isOffer ? '🔥 عرض خاص' : 'خصم'} {discountPercentage}%
           </Badge>
         )}
+        
+        {/* الشارات الذكية */}
+        <div className="absolute top-10 right-2 z-10 flex flex-col gap-1">
+          {isBestSeller && (
+            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 border-0 text-xs px-2 py-0.5">
+              🔥 الأكثر مبيعاً
+            </Badge>
+          )}
+          {isHighRated && (
+            <Badge className="bg-gradient-to-r from-yellow-500 to-amber-500 border-0 text-xs px-2 py-0.5">
+              ⭐ تقييم عالي
+            </Badge>
+          )}
+          {isLimited && (
+            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 border-0 text-xs px-2 py-0.5">
+              ⏳ كمية محدودة
+            </Badge>
+          )}
+          {isGiftSuitable && (
+            <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 border-0 text-xs px-2 py-0.5">
+              🎁 مناسب هدية
+            </Badge>
+          )}
+        </div>
+        
         {product.is_featured && (
           <Badge className="absolute top-2 left-2 z-10 bg-gradient-to-r from-primary to-secondary border-0">
             مميز ⭐
