@@ -126,29 +126,63 @@ const ARPhotoFilter = () => {
     setIsProcessing(true);
 
     try {
-      // Call the AI to overlay the product on the child's image
-      const response = await supabase.functions.invoke('ai-virtual-tryon', {
-        body: {
-          childImage,
-          productImageUrl: product.image_url,
-          productName: product.name
-        }
+      // تركيب صورة المنتج على صورة الطفل بدون AI
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas not supported');
+
+      // تحميل صورة الطفل
+      const childImg = new Image();
+      childImg.crossOrigin = 'anonymous';
+      
+      await new Promise<void>((resolve, reject) => {
+        childImg.onload = () => resolve();
+        childImg.onerror = reject;
+        childImg.src = childImage;
       });
 
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
+      // تحميل صورة المنتج
+      const productImg = new Image();
+      productImg.crossOrigin = 'anonymous';
+      
+      await new Promise<void>((resolve, reject) => {
+        productImg.onload = () => resolve();
+        productImg.onerror = reject;
+        productImg.src = product.image_url!;
+      });
 
-      if (response.data?.resultImage) {
-        setResultImage(response.data.resultImage);
-        setStep('result');
-        toast.success('تم تركيب الملابس بنجاح!');
-      } else {
-        throw new Error('لم نحصل على نتيجة');
-      }
+      // ضبط حجم الكانفس
+      canvas.width = childImg.width;
+      canvas.height = childImg.height;
+
+      // رسم صورة الطفل
+      ctx.drawImage(childImg, 0, 0);
+
+      // حساب حجم وموقع المنتج (في منتصف الصورة)
+      const productWidth = canvas.width * 0.6;
+      const productHeight = (productImg.height / productImg.width) * productWidth;
+      const productX = (canvas.width - productWidth) / 2;
+      const productY = canvas.height * 0.25;
+
+      // إضافة شفافية خفيفة للمنتج
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(productImg, productX, productY, productWidth, productHeight);
+      ctx.globalAlpha = 1;
+
+      // إضافة شعار
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillRect(10, canvas.height - 40, 120, 30);
+      ctx.fillStyle = '#ec4899';
+      ctx.font = 'bold 16px Arial';
+      ctx.fillText('zahra.ink 🎀', 20, canvas.height - 18);
+
+      const result = canvas.toDataURL('image/jpeg', 0.9);
+      setResultImage(result);
+      setStep('result');
+      toast.success('تم تركيب الملابس بنجاح!');
     } catch (error) {
       console.error('Virtual try-on error:', error);
-      toast.error('حدث خطأ أثناء التجربة الافتراضية');
+      toast.error('حدث خطأ أثناء التجربة');
       setStep('select-product');
     } finally {
       setIsProcessing(false);
@@ -343,9 +377,9 @@ const ARPhotoFilter = () => {
             <CardContent className="py-12">
               <div className="text-center">
                 <Loader2 className="h-16 w-16 animate-spin mx-auto mb-4 text-primary" />
-                <h3 className="text-xl font-bold mb-2">جاري التجربة الافتراضية...</h3>
+                <h3 className="text-xl font-bold mb-2">جاري تركيب الملابس...</h3>
                 <p className="text-muted-foreground">
-                  الذكاء الاصطناعي يركب {selectedProduct?.name} على الصورة
+                  يتم تركيب {selectedProduct?.name} على الصورة
                 </p>
               </div>
             </CardContent>
