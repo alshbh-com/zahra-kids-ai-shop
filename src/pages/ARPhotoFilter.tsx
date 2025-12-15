@@ -126,63 +126,29 @@ const ARPhotoFilter = () => {
     setIsProcessing(true);
 
     try {
-      // تركيب صورة المنتج على صورة الطفل بدون AI
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Canvas not supported');
-
-      // تحميل صورة الطفل
-      const childImg = new Image();
-      childImg.crossOrigin = 'anonymous';
-      
-      await new Promise<void>((resolve, reject) => {
-        childImg.onload = () => resolve();
-        childImg.onerror = reject;
-        childImg.src = childImage;
+      // استدعاء AI لتركيب الملابس على صورة الطفل
+      const response = await supabase.functions.invoke('ai-virtual-tryon', {
+        body: {
+          childImage,
+          productImageUrl: product.image_url,
+          productName: product.name
+        }
       });
 
-      // تحميل صورة المنتج
-      const productImg = new Image();
-      productImg.crossOrigin = 'anonymous';
-      
-      await new Promise<void>((resolve, reject) => {
-        productImg.onload = () => resolve();
-        productImg.onerror = reject;
-        productImg.src = product.image_url!;
-      });
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
 
-      // ضبط حجم الكانفس
-      canvas.width = childImg.width;
-      canvas.height = childImg.height;
-
-      // رسم صورة الطفل
-      ctx.drawImage(childImg, 0, 0);
-
-      // حساب حجم وموقع المنتج (في منتصف الصورة)
-      const productWidth = canvas.width * 0.6;
-      const productHeight = (productImg.height / productImg.width) * productWidth;
-      const productX = (canvas.width - productWidth) / 2;
-      const productY = canvas.height * 0.25;
-
-      // إضافة شفافية خفيفة للمنتج
-      ctx.globalAlpha = 0.85;
-      ctx.drawImage(productImg, productX, productY, productWidth, productHeight);
-      ctx.globalAlpha = 1;
-
-      // إضافة شعار
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.fillRect(10, canvas.height - 40, 120, 30);
-      ctx.fillStyle = '#ec4899';
-      ctx.font = 'bold 16px Arial';
-      ctx.fillText('zahra.ink 🎀', 20, canvas.height - 18);
-
-      const result = canvas.toDataURL('image/jpeg', 0.9);
-      setResultImage(result);
-      setStep('result');
-      toast.success('تم تركيب الملابس بنجاح!');
+      if (response.data?.resultImage) {
+        setResultImage(response.data.resultImage);
+        setStep('result');
+        toast.success('تم تركيب الملابس بنجاح!');
+      } else {
+        throw new Error('لم نحصل على نتيجة');
+      }
     } catch (error) {
       console.error('Virtual try-on error:', error);
-      toast.error('حدث خطأ أثناء التجربة');
+      toast.error('حدث خطأ أثناء التجربة الافتراضية');
       setStep('select-product');
     } finally {
       setIsProcessing(false);
