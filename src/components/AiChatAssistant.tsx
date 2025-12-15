@@ -4,59 +4,94 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
+// إجابات جاهزة بناءً على الكلمات المفتاحية
+const getAutoResponse = (userInput: string): string => {
+  const input = userInput.toLowerCase();
+  
+  // التحية
+  if (input.includes("مرحبا") || input.includes("اهلا") || input.includes("هاي") || input.includes("السلام")) {
+    return "أهلاً وسهلاً بك في متجر زهرة! 🌸 كيف أقدر أساعدك؟";
+  }
+  
+  // المنتجات
+  if (input.includes("منتج") || input.includes("ملابس") || input.includes("لبس")) {
+    return "نوفر ملابس أطفال عالية الجودة من سن حديثي الولادة حتى 12 سنة. تصفح المنتجات من الصفحة الرئيسية أو استخدم البحث 😊";
+  }
+  
+  // الأسعار
+  if (input.includes("سعر") || input.includes("كام") || input.includes("بكم") || input.includes("تكلف")) {
+    return "أسعارنا تبدأ من 100 جنيه وحتى 500 جنيه حسب المنتج. كل العروض موجودة في الصفحة الرئيسية مع الأسعار 💰";
+  }
+  
+  // الشحن
+  if (input.includes("شحن") || input.includes("توصيل") || input.includes("delivery")) {
+    return "نوفر توصيل لجميع محافظات مصر! 🚚 تكلفة الشحن تختلف حسب المحافظة (من 55 إلى 100 جنيه). الدفع عند الاستلام متاح.";
+  }
+  
+  // الدفع
+  if (input.includes("دفع") || input.includes("فلوس") || input.includes("payment")) {
+    return "الدفع عند الاستلام متاح لجميع الطلبات 💳 مش محتاج تدفع أونلاين!";
+  }
+  
+  // المقاسات
+  if (input.includes("مقاس") || input.includes("سايز") || input.includes("size")) {
+    return "عندنا مقاسات من حديثي الولادة حتى 12 سنة. لو محتاج مساعدة في اختيار المقاس، جرب أداة قياس المقاس من القائمة 📏";
+  }
+  
+  // الإرجاع
+  if (input.includes("رجع") || input.includes("استبدال") || input.includes("return")) {
+    return "نوفر سياسة إرجاع واستبدال خلال 14 يوم من الاستلام. تواصل معنا على 01033050236 لأي استفسار 📞";
+  }
+  
+  // التواصل
+  if (input.includes("تواصل") || input.includes("رقم") || input.includes("واتس") || input.includes("whatsapp")) {
+    return "للتواصل معنا:\n📞 01033050236\n📞 01002989846\nأو تابعنا على السوشيال ميديا من الصفحة الرئيسية!";
+  }
+  
+  // المطور
+  if (input.includes("مطور") || input.includes("صمم") || input.includes("برمج") || input.includes("عمل الموقع")) {
+    return "تم تطوير موقع زهرة بواسطة شركة 𝘼𝙇𝙎𝙃𝘽𝙃 💻\nللتواصل: 01204486263";
+  }
+  
+  // العروض
+  if (input.includes("عرض") || input.includes("خصم") || input.includes("تخفيض") || input.includes("offer")) {
+    return "عندنا عروض مستمرة على كل المنتجات! 🔥 تصفح الصفحة الرئيسية لمشاهدة أحدث العروض والخصومات.";
+  }
+  
+  // الشكر
+  if (input.includes("شكر") || input.includes("thanks") || input.includes("ممتاز")) {
+    return "العفو! 😊 سعداء بخدمتك. لو محتاج أي حاجة تانية، أنا موجود!";
+  }
+  
+  // إجابة افتراضية
+  return "أهلاً بك! 😊 للمساعدة:\n• تصفح المنتجات من الصفحة الرئيسية\n• استخدم البحث للوصول لما تريد\n• للتواصل: 01033050236";
+};
+
 export const AiChatAssistant = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "أهلاً! ابحث عن إيه؟",
+      content: "أهلاً! كيف أقدر أساعدك؟ 🌸",
     },
   ]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!input.trim()) return;
 
     const userMessage: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const response = getAutoResponse(input);
+    const assistantMessage: Message = { role: "assistant", content: response };
+    
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
     setInput("");
-    setIsLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { 
-          messages: [...messages, userMessage],
-          action: 'chat'
-        }
-      });
-
-      if (error) throw error;
-
-      const assistantMessage: Message = {
-        role: "assistant",
-        content: data.message || "عذراً، لم أتمكن من الرد. حاول مرة أخرى.",
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error("AI Error:", error);
-      toast.error("حدث خطأ في الاتصال بالمساعد الذكي");
-      const errorMessage: Message = {
-        role: "assistant",
-        content: "عذراً، حدث خطأ. حاول مرة أخرى لاحقاً.",
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   if (!isOpen) {
@@ -74,7 +109,7 @@ export const AiChatAssistant = () => {
   return (
     <Card className="fixed bottom-24 left-4 right-4 md:left-auto md:right-4 md:w-96 z-40 shadow-2xl">
       <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-primary to-secondary text-primary-foreground">
-        <CardTitle className="text-lg">مساعد الذكاء الاصطناعي 🤖</CardTitle>
+        <CardTitle className="text-lg">مساعد زهرة 🌸</CardTitle>
         <Button
           size="icon"
           variant="ghost"
@@ -103,17 +138,6 @@ export const AiChatAssistant = () => {
                 </div>
               </div>
             ))}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="bg-muted rounded-2xl px-4 py-2">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-100" />
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce delay-200" />
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         </ScrollArea>
         <div className="p-4 border-t flex gap-2">
@@ -123,9 +147,8 @@ export const AiChatAssistant = () => {
             onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
             placeholder="اكتب رسالتك..."
             className="flex-1"
-            disabled={isLoading}
           />
-          <Button onClick={handleSend} disabled={isLoading || !input.trim()}>
+          <Button onClick={handleSend} disabled={!input.trim()}>
             <Send className="w-4 h-4" />
           </Button>
         </div>
