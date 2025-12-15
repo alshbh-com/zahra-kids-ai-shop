@@ -28,6 +28,19 @@ const Cart = () => {
   const [notes, setNotes] = useState("");
   const [selectedGovernorate, setSelectedGovernorate] = useState("");
   const [showThankYou, setShowThankYou] = useState(false);
+  const [wheelDiscount, setWheelDiscount] = useState<{discount: number, minOrder: number} | null>(null);
+
+  // Check for wheel discount
+  useEffect(() => {
+    const savedDiscount = localStorage.getItem('wheelDiscount');
+    if (savedDiscount) {
+      try {
+        setWheelDiscount(JSON.parse(savedDiscount));
+      } catch (e) {
+        console.error('Error parsing wheel discount:', e);
+      }
+    }
+  }, []);
 
   // جلب المحافظات من قاعدة البيانات
   const { data: governorates = [] } = useQuery({
@@ -49,7 +62,10 @@ const Cart = () => {
   }, {});
 
   const shippingCost = selectedGovernorate ? shippingPrices[selectedGovernorate] || 0 : 0;
-  const finalTotal = totalAmount + shippingCost;
+  
+  // Calculate wheel discount
+  const appliedWheelDiscount = wheelDiscount && totalAmount >= wheelDiscount.minOrder ? wheelDiscount.discount : 0;
+  const finalTotal = totalAmount + shippingCost - appliedWheelDiscount;
 
   const queryClient = useQueryClient();
 
@@ -159,7 +175,7 @@ ${itemsDetails}
 💰 *الملخص المالي:*
 ━━━━━━━━━━━━━━━━━━
 • المنتجات: ${totalAmount} جنيه
-• الشحن: ${shippingCost} جنيه
+• الشحن: ${shippingCost} جنيه${appliedWheelDiscount > 0 ? `\n• 🎁 خصم عجلة الحظ: -${appliedWheelDiscount} جنيه` : ''}
 • *الإجمالي النهائي: ${finalTotal} جنيه* 💵
 
 ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
@@ -169,6 +185,11 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
 
     const whatsappUrl = `https://wa.me/201033050236?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
+
+    // Clear wheel discount after use
+    if (appliedWheelDiscount > 0) {
+      localStorage.removeItem('wheelDiscount');
+    }
 
     // مسح السلة والبيانات
     clearCart();
@@ -454,6 +475,17 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                       <div className="flex justify-between text-base text-primary">
                         <span>الشحن ({selectedGovernorate}):</span>
                         <span>{shippingCost} جنيه</span>
+                      </div>
+                    )}
+                    {appliedWheelDiscount > 0 && (
+                      <div className="flex justify-between text-base text-green-600">
+                        <span>🎁 خصم عجلة الحظ:</span>
+                        <span>-{appliedWheelDiscount} جنيه</span>
+                      </div>
+                    )}
+                    {wheelDiscount && totalAmount < wheelDiscount.minOrder && (
+                      <div className="text-xs text-muted-foreground bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
+                        💡 أضف منتجات بقيمة {wheelDiscount.minOrder - totalAmount} جنيه للحصول على خصم {wheelDiscount.discount} جنيه!
                       </div>
                     )}
                     <div className="flex justify-between text-lg font-bold border-t pt-2">
