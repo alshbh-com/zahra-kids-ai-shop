@@ -118,6 +118,50 @@ const ARPhotoFilter = () => {
     reader.readAsDataURL(file);
   };
 
+  // تركيب بسيط للصورة (fallback بدون AI)
+  const simpleOverlay = async (product: Product): Promise<string> => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx || !childImage) throw new Error('Canvas not supported');
+
+    const childImg = new Image();
+    childImg.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      childImg.onload = () => resolve();
+      childImg.onerror = reject;
+      childImg.src = childImage;
+    });
+
+    const productImg = new Image();
+    productImg.crossOrigin = 'anonymous';
+    await new Promise<void>((resolve, reject) => {
+      productImg.onload = () => resolve();
+      productImg.onerror = reject;
+      productImg.src = product.image_url!;
+    });
+
+    canvas.width = childImg.width;
+    canvas.height = childImg.height;
+    ctx.drawImage(childImg, 0, 0);
+
+    const productWidth = canvas.width * 0.55;
+    const productHeight = (productImg.height / productImg.width) * productWidth;
+    const productX = (canvas.width - productWidth) / 2;
+    const productY = canvas.height * 0.2;
+
+    ctx.globalAlpha = 0.9;
+    ctx.drawImage(productImg, productX, productY, productWidth, productHeight);
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.fillRect(10, canvas.height - 40, 120, 30);
+    ctx.fillStyle = '#ec4899';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText('zahra.ink 🎀', 20, canvas.height - 18);
+
+    return canvas.toDataURL('image/jpeg', 0.9);
+  };
+
   const processVirtualTryOn = async (product: Product) => {
     if (!childImage || !product.image_url) return;
 
@@ -126,7 +170,7 @@ const ARPhotoFilter = () => {
     setIsProcessing(true);
 
     try {
-      // استدعاء AI لتركيب الملابس على صورة الطفل
+      // محاولة استدعاء AI أولاً
       const response = await supabase.functions.invoke('ai-virtual-tryon', {
         body: {
           childImage,
@@ -135,21 +179,32 @@ const ARPhotoFilter = () => {
         }
       });
 
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (response.error || !response.data?.resultImage) {
+        // إذا فشل AI، استخدم التركيب البسيط
+        console.log('AI failed, using simple overlay fallback');
+        const fallbackResult = await simpleOverlay(product);
+        setResultImage(fallbackResult);
+        setStep('result');
+        toast.success('تم تركيب الملابس!');
+        return;
       }
 
-      if (response.data?.resultImage) {
-        setResultImage(response.data.resultImage);
-        setStep('result');
-        toast.success('تم تركيب الملابس بنجاح!');
-      } else {
-        throw new Error('لم نحصل على نتيجة');
-      }
+      setResultImage(response.data.resultImage);
+      setStep('result');
+      toast.success('تم تركيب الملابس بنجاح!');
     } catch (error) {
       console.error('Virtual try-on error:', error);
-      toast.error('حدث خطأ أثناء التجربة الافتراضية');
-      setStep('select-product');
+      // محاولة التركيب البسيط كبديل
+      try {
+        const fallbackResult = await simpleOverlay(product);
+        setResultImage(fallbackResult);
+        setStep('result');
+        toast.success('تم تركيب الملابس!');
+      } catch (fallbackError) {
+        console.error('Fallback error:', fallbackError);
+        toast.error('حدث خطأ، يرجى المحاولة لاحقاً');
+        setStep('select-product');
+      }
     } finally {
       setIsProcessing(false);
     }
