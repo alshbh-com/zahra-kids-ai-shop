@@ -5,13 +5,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Gemini API Key
-const GEMINI_API_KEY = "AIzaSyDfHHHrvAPIwn9Z4E5Ngks6xwWj24fPfIs";
+// Read Gemini API key from Supabase secrets
+const GEMINI_API_KEY = Deno.env.get("GOOGLE_AI_API_KEY");
 
 // Helper function to convert ArrayBuffer to base64 in chunks
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  let binary = '';
+  let binary = "";
   const chunkSize = 8192;
   for (let i = 0; i < bytes.length; i += chunkSize) {
     const chunk = bytes.slice(i, i + chunkSize);
@@ -26,6 +26,10 @@ serve(async (req) => {
   }
 
   try {
+    if (!GEMINI_API_KEY) {
+      throw new Error("GOOGLE_AI_API_KEY is not configured in Supabase secrets");
+    }
+
     const { childImage, productImageUrl, productName } = await req.json();
 
     if (!childImage || !productImageUrl) {
@@ -58,8 +62,8 @@ serve(async (req) => {
     const productImageBase64 = arrayBufferToBase64(productImageBuffer);
     const productContentType = productResponse.headers.get("content-type") || "image/jpeg";
 
-    // Call Gemini API with image generation capability
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-06-05:generateContent?key=${GEMINI_API_KEY}`;
+    // Call Gemini API (Image model)
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
 
     const prompt = `You are an expert virtual clothing try-on AI for children's fashion. Your task:
 
