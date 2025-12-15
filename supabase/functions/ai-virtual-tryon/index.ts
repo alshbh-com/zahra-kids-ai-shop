@@ -8,6 +8,18 @@ const corsHeaders = {
 // Gemini API Key
 const GEMINI_API_KEY = "AIzaSyDfHHHrvAPIwn9Z4E5Ngks6xwWj24fPfIs";
 
+// Helper function to convert ArrayBuffer to base64 in chunks
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, i + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+  return btoa(binary);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -43,9 +55,7 @@ serve(async (req) => {
       throw new Error("Failed to fetch product image");
     }
     const productImageBuffer = await productResponse.arrayBuffer();
-    const productImageBase64 = btoa(
-      String.fromCharCode(...new Uint8Array(productImageBuffer))
-    );
+    const productImageBase64 = arrayBufferToBase64(productImageBuffer);
     const productContentType = productResponse.headers.get("content-type") || "image/jpeg";
 
     // Call Gemini API with image generation capability
