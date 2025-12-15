@@ -103,27 +103,49 @@ Output a single realistic image of the child wearing the clothing item. The resu
       }
     };
 
-    console.log("Calling Gemini API for image generation...");
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    // Retry logic for rate limiting
+    let response: Response | null = null;
+    let lastError = "";
+    
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      console.log(`Calling Gemini API (attempt ${attempt}/3)...`);
+      
+      response = await fetch(geminiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-    if (!response.ok) {
+      if (response.ok) {
+        break;
+      }
+      
       const errorText = await response.text();
-      console.error("Gemini API error:", response.status, errorText);
+      lastError = errorText;
+      console.error(`Gemini API error (attempt ${attempt}):`, response.status, errorText);
+      
+      if (response.status === 429 && attempt < 3) {
+        // Wait before retry (2s, then 4s)
+        const waitTime = attempt * 2000;
+        console.log(`Rate limited, waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
       
       if (response.status === 429) {
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded, please try again later" }),
+          JSON.stringify({ error: "خدمة AI مشغولة حالياً، يرجى المحاولة بعد دقيقة" }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
       throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
+    }
+    
+    if (!response || !response.ok) {
+      throw new Error(`Gemini API failed after retries: ${lastError}`);
     }
 
     const data = await response.json();
