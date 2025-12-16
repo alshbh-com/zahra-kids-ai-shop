@@ -289,7 +289,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              addToCart(product);
+              addToCart(product, [], []);
               navigate('/cart');
             }}
             disabled={stockQuantity === 0}
@@ -304,7 +304,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
               variant="outline"
               onClick={(e) => {
                 e.stopPropagation();
-                addToCart(product);
+                addToCart(product, [], []);
               }}
               disabled={stockQuantity === 0}
             >

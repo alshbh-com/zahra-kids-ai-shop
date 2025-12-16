@@ -12,18 +12,21 @@ interface CartItem {
   image_url?: string;
   quantity: number;
   maxStock?: number;
-  selectedSize?: string;
-  selectedColor?: string;
+  selectedSizes?: string[]; // مقاسات متعددة
+  selectedColors?: string[]; // ألوان متعددة
   size_options?: string[];
   color_options?: string[];
+  // للتوافق مع الكود القديم
+  selectedSize?: string;
+  selectedColor?: string;
 }
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: any, size?: string, color?: string) => Promise<void>;
+  addToCart: (product: any, sizes?: string[], colors?: string[]) => Promise<void>;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => Promise<void>;
-  updateItemOptions: (id: string, size?: string, color?: string) => void;
+  updateItemOptions: (id: string, sizes?: string[], colors?: string[]) => void;
   clearCart: () => void;
   totalAmount: number;
   refreshStock: () => Promise<void>;
@@ -38,7 +41,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const parsed = JSON.parse(saved);
       return parsed.map((item: any) => ({
         ...item,
-        name: item.name || item.name_ar || 'منتج'
+        name: item.name || item.name_ar || 'منتج',
+        // تحويل القيم القديمة للمصفوفات
+        selectedSizes: item.selectedSizes || (item.selectedSize ? [item.selectedSize] : []),
+        selectedColors: item.selectedColors || (item.selectedColor ? [item.selectedColor] : []),
       }));
     }
     return [];
@@ -86,7 +92,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addToCart = async (product: any, size?: string, color?: string) => {
+  const addToCart = async (product: any, sizes?: string[], colors?: string[]) => {
     const currentStock = await getProductStock(product.id);
     
     if (currentStock <= 0) {
@@ -99,12 +105,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const finalPrice = isOffer ? product.offer_price : (product.discount_price || product.price);
 
     setItems((prev) => {
-      // البحث عن منتج بنفس ID والمقاس واللون
-      const existing = prev.find(
-        (item) => item.id === product.id && 
-                  item.selectedSize === size && 
-                  item.selectedColor === color
-      );
+      // البحث عن منتج بنفس ID
+      const existing = prev.find((item) => item.id === product.id);
       
       if (existing) {
         if (existing.quantity >= currentStock) {
@@ -113,8 +115,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
         toast.success('تم زيادة الكمية');
         return prev.map((item) =>
-          item.id === product.id && item.selectedSize === size && item.selectedColor === color
-            ? { ...item, quantity: item.quantity + 1, maxStock: currentStock }
+          item.id === product.id
+            ? { 
+                ...item, 
+                quantity: item.quantity + 1, 
+                maxStock: currentStock,
+                selectedSizes: sizes || item.selectedSizes || [],
+                selectedColors: colors || item.selectedColors || [],
+              }
             : item
         );
       }
@@ -132,8 +140,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           image_url: product.product_images?.[0]?.image_url || product.image_url,
           quantity: 1,
           maxStock: currentStock,
-          selectedSize: size,
-          selectedColor: color,
+          selectedSizes: sizes || [],
+          selectedColors: colors || [],
           size_options: product.size_options || [],
           color_options: product.color_options || [],
         },
@@ -163,15 +171,27 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, quantity, maxStock: currentStock } : item))
+      prev.map((item) => {
+        if (item.id === id) {
+          // تقليل المقاسات والألوان إذا تم تقليل الكمية
+          const newSizes = (item.selectedSizes || []).slice(0, quantity);
+          const newColors = (item.selectedColors || []).slice(0, quantity);
+          return { ...item, quantity, maxStock: currentStock, selectedSizes: newSizes, selectedColors: newColors };
+        }
+        return item;
+      })
     );
   };
 
-  const updateItemOptions = (id: string, size?: string, color?: string) => {
+  const updateItemOptions = (id: string, sizes?: string[], colors?: string[]) => {
     setItems((prev) =>
       prev.map((item) => 
         item.id === id 
-          ? { ...item, selectedSize: size || item.selectedSize, selectedColor: color || item.selectedColor } 
+          ? { 
+              ...item, 
+              selectedSizes: sizes !== undefined ? sizes : item.selectedSizes,
+              selectedColors: colors !== undefined ? colors : item.selectedColors,
+            } 
           : item
       )
     );

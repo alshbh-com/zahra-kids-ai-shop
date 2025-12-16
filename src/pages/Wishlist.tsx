@@ -10,7 +10,7 @@ const Wishlist = () => {
   const { addToCart } = useCart();
 
   const handleAddToCart = (item: any) => {
-    addToCart(item);
+    addToCart(item, [], []);
   };
 
   if (items.length === 0) {

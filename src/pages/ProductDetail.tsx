@@ -126,7 +126,7 @@ export default function ProductDetail() {
                 <Button
                   className="flex-1"
                   size="lg"
-                  onClick={() => addToCart(product)}
+                  onClick={() => addToCart(product, [], [])}
                 >
                   أضف للسلة
                 </Button>
