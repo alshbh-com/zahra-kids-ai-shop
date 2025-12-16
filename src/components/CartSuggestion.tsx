@@ -59,11 +59,11 @@ export const CartSuggestion = ({ cartProductIds }: CartSuggestionProps) => {
       return;
     }
 
-    addToCart({
-      ...suggestedProduct,
-      selectedSize: selectedSize || undefined,
-      selectedColor: selectedColor || undefined
-    });
+    addToCart(
+      suggestedProduct,
+      selectedSize ? [selectedSize] : [],
+      selectedColor ? [selectedColor] : []
+    );
     toast.success("تمت الإضافة للسلة ✅");
     setDismissed(true);
   };

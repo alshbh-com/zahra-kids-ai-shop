@@ -149,12 +149,12 @@ export const OrdersView = () => {
                               </Badge>
                               {item.size && (
                                 <Badge variant="outline" className="text-xs">
-                                  المقاس: {item.size}
+                                  المقاسات: {item.size}
                                 </Badge>
                               )}
                               {item.color && (
                                 <Badge variant="outline" className="text-xs">
-                                  اللون: {item.color}
+                                  الألوان: {item.color}
                                 </Badge>
                               )}
                             </div>
