@@ -104,12 +104,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const isOffer = product.is_offer && product.offer_price && product.offer_price < product.price;
     const finalPrice = isOffer ? product.offer_price : (product.discount_price || product.price);
 
+    // الكمية المطلوبة = طول مصفوفة الألوان أو المقاسات أو 1
+    const requestedQuantity = Math.max(
+      sizes?.length || 0,
+      colors?.length || 0,
+      1
+    );
+
     setItems((prev) => {
       // البحث عن منتج بنفس ID
       const existing = prev.find((item) => item.id === product.id);
       
       if (existing) {
-        if (existing.quantity >= currentStock) {
+        const newQuantity = existing.quantity + requestedQuantity;
+        if (newQuantity > currentStock) {
           toast.error(`عذراً، الحد الأقصى المتاح هو ${currentStock} قطعة فقط`);
           return prev;
         }
@@ -118,10 +126,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           item.id === product.id
             ? { 
                 ...item, 
-                quantity: item.quantity + 1, 
+                quantity: newQuantity, 
                 maxStock: currentStock,
-                selectedSizes: sizes || item.selectedSizes || [],
-                selectedColors: colors || item.selectedColors || [],
+                selectedSizes: [...(item.selectedSizes || []), ...(sizes || [])],
+                selectedColors: [...(item.selectedColors || []), ...(colors || [])],
               }
             : item
         );
@@ -138,7 +146,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           price: product.price,
           discount_price: finalPrice,
           image_url: product.product_images?.[0]?.image_url || product.image_url,
-          quantity: 1,
+          quantity: requestedQuantity,
           maxStock: currentStock,
           selectedSizes: sizes || [],
           selectedColors: colors || [],
