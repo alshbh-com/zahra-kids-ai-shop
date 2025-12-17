@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { useWishlist } from "@/contexts/WishlistContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { useColorVariants, ColorVariant } from "@/hooks/useColorVariants";
 
 interface ProductModalProps {
   product: any;
@@ -17,6 +18,12 @@ interface ProductModalProps {
   viewersCount: number;
   progressPercentage: number;
   fakeStockLeft: number;
+}
+
+interface ColorSelection {
+  color: string;
+  quantity: number;
+  sizes: { size: string; quantity: number }[];
 }
 
 export const ProductModal = ({ 
@@ -33,10 +40,20 @@ export const ProductModal = ({
   const navigate = useNavigate();
   
   const [quantity, setQuantity] = useState(1);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [colorSelections, setColorSelections] = useState<ColorSelection[]>([]);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   
   const inWishlist = isInWishlist(product.id);
+  
+  // جلب الألوان والمقاسات من قاعدة البيانات
+  const { data: colorVariants = [], isLoading: variantsLoading } = useColorVariants(product.id);
+  
+  // fallback للألوان والمقاسات القديمة إذا لم تكن هناك variants
+  const legacySizeOptions = product.size_options || [];
+  const legacyColorOptions = product.color_options || [];
+  const hasVariants = colorVariants.length > 0;
+  const hasSizes = hasVariants || legacySizeOptions.length > 0;
+  const hasColors = hasVariants || legacyColorOptions.length > 0;
   
   // دعم العروض
   const isOffer = product.is_offer && product.offer_price && product.offer_price < product.price;
@@ -47,13 +64,162 @@ export const ProductModal = ({
     ? Math.round(((originalPrice - finalPrice) / originalPrice) * 100)
     : 0;
 
-  const remainingStock = fakeStockLeft;
+  // Reset selections when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setQuantity(1);
+      setColorSelections([]);
+      setSelectedColor(null);
+    }
+  }, [isOpen, product.id]);
 
-  // المقاسات والألوان من المنتج
-  const sizeOptions = product.size_options || [];
-  const colorOptions = product.color_options || [];
-  const hasSizes = sizeOptions.length > 0;
-  const hasColors = colorOptions.length > 0;
+  // حساب الكمية المتاحة للون
+  const getColorStock = (color: string) => {
+    if (hasVariants) {
+      const variant = colorVariants.find(v => v.color === color);
+      return variant?.stock || 0;
+    }
+    return product.stock ?? product.stock_quantity ?? 99;
+  };
+
+  // حساب المقاسات المتاحة للون
+  const getColorSizes = (color: string) => {
+    if (hasVariants) {
+      const variant = colorVariants.find(v => v.color === color);
+      return variant?.sizes || [];
+    }
+    return legacySizeOptions;
+  };
+
+  // حساب إجمالي القطع المختارة
+  const getTotalSelectedQuantity = () => {
+    return colorSelections.reduce((sum, sel) => sum + sel.quantity, 0);
+  };
+
+  // حساب إجمالي المقاسات المختارة للون
+  const getColorSizesQuantity = (color: string) => {
+    const selection = colorSelections.find(s => s.color === color);
+    if (!selection) return 0;
+    return selection.sizes.reduce((sum, s) => sum + s.quantity, 0);
+  };
+
+  // إضافة كمية للون
+  const increaseColorQuantity = (color: string) => {
+    const colorStock = getColorStock(color);
+    const currentSelection = colorSelections.find(s => s.color === color);
+    const currentQty = currentSelection?.quantity || 0;
+    
+    if (currentQty >= colorStock) {
+      toast.error(`الكمية المتاحة من اللون "${color}" هي ${colorStock} فقط`);
+      return;
+    }
+    
+    if (getTotalSelectedQuantity() >= quantity) {
+      toast.error(`لقد وصلت للحد الأقصى ${quantity} قطعة`);
+      return;
+    }
+
+    setColorSelections(prev => {
+      const existing = prev.find(s => s.color === color);
+      if (existing) {
+        return prev.map(s => s.color === color ? { ...s, quantity: s.quantity + 1 } : s);
+      }
+      return [...prev, { color, quantity: 1, sizes: [] }];
+    });
+  };
+
+  // تقليل كمية اللون
+  const decreaseColorQuantity = (color: string) => {
+    setColorSelections(prev => {
+      const existing = prev.find(s => s.color === color);
+      if (!existing || existing.quantity <= 0) return prev;
+      if (existing.quantity === 1) {
+        return prev.filter(s => s.color !== color);
+      }
+      // تقليل المقاسات أيضاً إذا لزم الأمر
+      const newQty = existing.quantity - 1;
+      const totalSizes = existing.sizes.reduce((sum, s) => sum + s.quantity, 0);
+      let newSizes = [...existing.sizes];
+      if (totalSizes > newQty) {
+        // نحتاج لتقليل المقاسات
+        let toRemove = totalSizes - newQty;
+        newSizes = newSizes.map(s => {
+          if (toRemove > 0 && s.quantity > 0) {
+            const remove = Math.min(toRemove, s.quantity);
+            toRemove -= remove;
+            return { ...s, quantity: s.quantity - remove };
+          }
+          return s;
+        }).filter(s => s.quantity > 0);
+      }
+      return prev.map(s => s.color === color ? { ...s, quantity: newQty, sizes: newSizes } : s);
+    });
+  };
+
+  // إضافة كمية للمقاس
+  const increaseSizeQuantity = (color: string, size: string) => {
+    const colorSelection = colorSelections.find(s => s.color === color);
+    if (!colorSelection) {
+      toast.error("يرجى اختيار اللون أولاً");
+      return;
+    }
+
+    const totalSizes = getColorSizesQuantity(color);
+    if (totalSizes >= colorSelection.quantity) {
+      toast.error(`يمكنك اختيار ${colorSelection.quantity} مقاس/مقاسات فقط لهذا اللون`);
+      return;
+    }
+
+    setColorSelections(prev => prev.map(s => {
+      if (s.color === color) {
+        const existingSize = s.sizes.find(sz => sz.size === size);
+        if (existingSize) {
+          return {
+            ...s,
+            sizes: s.sizes.map(sz => sz.size === size ? { ...sz, quantity: sz.quantity + 1 } : sz)
+          };
+        }
+        return { ...s, sizes: [...s.sizes, { size, quantity: 1 }] };
+      }
+      return s;
+    }));
+  };
+
+  // تقليل كمية المقاس
+  const decreaseSizeQuantity = (color: string, size: string) => {
+    setColorSelections(prev => prev.map(s => {
+      if (s.color === color) {
+        const existingSize = s.sizes.find(sz => sz.size === size);
+        if (!existingSize || existingSize.quantity <= 0) return s;
+        if (existingSize.quantity === 1) {
+          return { ...s, sizes: s.sizes.filter(sz => sz.size !== size) };
+        }
+        return {
+          ...s,
+          sizes: s.sizes.map(sz => sz.size === size ? { ...sz, quantity: sz.quantity - 1 } : sz)
+        };
+      }
+      return s;
+    }));
+  };
+
+  // تغيير الكمية الإجمالية
+  const handleQuantityChange = (newQty: number) => {
+    const maxStock = hasVariants 
+      ? colorVariants.reduce((sum, v) => sum + v.stock, 0)
+      : (product.stock ?? product.stock_quantity ?? 99);
+    
+    if (newQty < 1) return;
+    if (newQty > maxStock) {
+      toast.error(`الحد الأقصى المتاح هو ${maxStock} قطعة`);
+      return;
+    }
+    setQuantity(newQty);
+    // تقليل الاختيارات إذا تجاوزت الكمية الجديدة
+    if (getTotalSelectedQuantity() > newQty) {
+      setColorSelections([]);
+    }
+  };
 
   const handleShare = () => {
     const productUrl = `${window.location.origin}/product/${product.id}`;
@@ -69,71 +235,69 @@ export const ProductModal = ({
     }
   };
 
-  // إضافة/إزالة مقاس
-  const toggleSize = (size: string) => {
-    if (selectedSizes.includes(size)) {
-      setSelectedSizes(prev => prev.filter(s => s !== size));
-    } else if (selectedSizes.length < quantity) {
-      setSelectedSizes(prev => [...prev, size]);
-    } else {
-      toast.error(`يمكنك اختيار ${quantity} مقاس/مقاسات فقط حسب عدد القطع`);
-    }
-  };
-
-  // إضافة/إزالة لون
-  const toggleColor = (color: string) => {
-    if (selectedColors.includes(color)) {
-      setSelectedColors(prev => prev.filter(c => c !== color));
-    } else if (selectedColors.length < quantity) {
-      setSelectedColors(prev => [...prev, color]);
-    } else {
-      toast.error(`يمكنك اختيار ${quantity} لون/ألوان فقط حسب عدد القطع`);
-    }
-  };
-
-  // عند تغيير الكمية، تقليل المقاسات والألوان إذا لزم الأمر
-  const handleQuantityChange = (newQty: number) => {
-    const stockQuantity = product.stock ?? product.stock_quantity ?? 99;
-    if (newQty < 1) return;
-    if (newQty > stockQuantity) {
-      toast.error(`الحد الأقصى المتاح هو ${stockQuantity} قطعة`);
-      return;
-    }
-    setQuantity(newQty);
-    // تقليل الاختيارات إذا تجاوزت الكمية الجديدة
-    if (selectedSizes.length > newQty) {
-      setSelectedSizes(prev => prev.slice(0, newQty));
-    }
-    if (selectedColors.length > newQty) {
-      setSelectedColors(prev => prev.slice(0, newQty));
-    }
-  };
-
   const handleAddToCart = (goToCart: boolean = false) => {
-    // التحقق من اختيار المقاس واللون إذا كانت متاحة
-    if (hasSizes && selectedSizes.length === 0) {
-      toast.error("⚠️ يرجى اختيار مقاس واحد على الأقل", { duration: 3000 });
-      return;
-    }
-    if (hasColors && selectedColors.length === 0) {
+    const availableColors = hasVariants ? colorVariants.map(v => v.color) : legacyColorOptions;
+    const requiresColor = availableColors.length > 0;
+    const requiresSize = hasSizes;
+
+    if (requiresColor && colorSelections.length === 0) {
       toast.error("⚠️ يرجى اختيار لون واحد على الأقل", { duration: 3000 });
       return;
     }
 
-    // إضافة للسلة مع الكمية والمقاسات والألوان
-    for (let i = 0; i < quantity; i++) {
-      const size = selectedSizes[i] || selectedSizes[selectedSizes.length - 1] || undefined;
-      const color = selectedColors[i] || selectedColors[selectedColors.length - 1] || undefined;
-      addToCart(product, size ? [size] : [], color ? [color] : []);
+    const totalSelected = getTotalSelectedQuantity();
+    if (requiresColor && totalSelected !== quantity) {
+      toast.error(`⚠️ يرجى اختيار ${quantity} قطعة من الألوان`, { duration: 3000 });
+      return;
+    }
+
+    // التحقق من المقاسات لكل لون
+    if (requiresSize) {
+      for (const selection of colorSelections) {
+        const sizes = getColorSizes(selection.color);
+        if (sizes.length > 0) {
+          const totalSizesForColor = getColorSizesQuantity(selection.color);
+          if (totalSizesForColor !== selection.quantity) {
+            toast.error(`⚠️ يرجى اختيار ${selection.quantity} مقاس للون "${selection.color}"`, { duration: 3000 });
+            return;
+          }
+        }
+      }
+    }
+
+    // إضافة للسلة
+    const allSizes: string[] = [];
+    const allColors: string[] = [];
+
+    for (const selection of colorSelections) {
+      if (selection.sizes.length > 0) {
+        for (const sizeSelection of selection.sizes) {
+          for (let i = 0; i < sizeSelection.quantity; i++) {
+            allColors.push(selection.color);
+            allSizes.push(sizeSelection.size);
+          }
+        }
+      } else {
+        for (let i = 0; i < selection.quantity; i++) {
+          allColors.push(selection.color);
+        }
+      }
+    }
+
+    // إذا لم تكن هناك ألوان variants، استخدم الطريقة القديمة
+    if (!requiresColor) {
+      for (let i = 0; i < quantity; i++) {
+        addToCart(product, [], []);
+      }
+    } else {
+      addToCart(product, allSizes, allColors);
     }
     
     if (goToCart) {
       navigate('/cart');
       onClose();
     } else {
-      const sizesText = selectedSizes.length > 0 ? ` - مقاسات: ${selectedSizes.join(', ')}` : '';
-      const colorsText = selectedColors.length > 0 ? ` - ألوان: ${selectedColors.join(', ')}` : '';
-      toast.success(`✅ تم إضافة ${quantity} قطعة من "${product.name_ar}" للسلة${sizesText}${colorsText}`);
+      toast.success(`✅ تم إضافة ${quantity} قطعة من "${product.name_ar}" للسلة`);
     }
   };
 
@@ -143,7 +307,11 @@ export const ProductModal = ({
       ? [{ image_url: product.image_url }] 
       : [];
   
-  const stockQuantity = product.stock ?? product.stock_quantity ?? 0;
+  const stockQuantity = hasVariants 
+    ? colorVariants.reduce((sum, v) => sum + v.stock, 0)
+    : (product.stock ?? product.stock_quantity ?? 0);
+
+  const availableColors = hasVariants ? colorVariants : legacyColorOptions.map((c: string) => ({ color: c, sizes: legacySizeOptions, stock: 99 }));
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -270,7 +438,7 @@ export const ProductModal = ({
 
             {/* اختيار الكمية */}
             <div className="space-y-2">
-              <label className="text-sm font-semibold">الكمية</label>
+              <label className="text-sm font-semibold">الكمية المطلوبة</label>
               <div className="flex items-center gap-3 border rounded-lg p-2 w-fit">
                 <Button
                   size="icon"
@@ -292,109 +460,117 @@ export const ProductModal = ({
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                يمكنك اختيار حتى {quantity} مقاس/مقاسات و {quantity} لون/ألوان
-              </p>
             </div>
 
-            {/* اختيار المقاس */}
-            {hasSizes && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold flex items-center gap-1">
-                  المقاس <span className="text-destructive">*</span>
-                  <Badge variant="secondary" className="text-xs mr-2">
-                    {selectedSizes.length}/{quantity}
+            {/* اختيار الألوان مع +/- */}
+            {availableColors.length > 0 && (
+              <div className="space-y-3">
+                <label className="text-sm font-semibold flex items-center gap-2">
+                  اختر اللون والكمية <span className="text-destructive">*</span>
+                  <Badge variant="secondary" className="text-xs">
+                    {getTotalSelectedQuantity()}/{quantity}
                   </Badge>
                 </label>
-                <div className="flex flex-wrap gap-2">
-                  {sizeOptions.map((size: string) => {
-                    const isSelected = selectedSizes.includes(size);
-                    const count = selectedSizes.filter(s => s === size).length;
+                <div className="space-y-2">
+                  {availableColors.map((variant: any) => {
+                    const color = variant.color;
+                    const colorStock = hasVariants ? variant.stock : 99;
+                    const selection = colorSelections.find(s => s.color === color);
+                    const selectedQty = selection?.quantity || 0;
+                    const isOutOfStock = colorStock === 0;
+
                     return (
-                      <Button
-                        key={size}
-                        variant={isSelected ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => toggleSize(size)}
-                        className={`relative ${isSelected ? "ring-2 ring-primary" : ""}`}
-                      >
-                        {size}
-                        {count > 1 && (
-                          <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs flex items-center justify-center">
-                            {count}
-                          </Badge>
+                      <div key={color} className={`border rounded-lg p-3 ${isOutOfStock ? 'opacity-50' : ''} ${selectedQty > 0 ? 'border-primary bg-primary/5' : ''}`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{color}</span>
+                            <Badge variant="outline" className={`text-xs ${colorStock <= 5 ? 'border-orange-500 text-orange-500' : ''}`}>
+                              متوفر: {colorStock}
+                            </Badge>
+                          </div>
+                          {!isOutOfStock && (
+                            <div className="flex items-center gap-2 border rounded-lg px-2 py-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => decreaseColorQuantity(color)}
+                                disabled={selectedQty === 0}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-6 text-center font-bold">{selectedQty}</span>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-6 w-6"
+                                onClick={() => increaseColorQuantity(color)}
+                                disabled={selectedQty >= colorStock || getTotalSelectedQuantity() >= quantity}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                          {isOutOfStock && <Badge variant="destructive" className="text-xs">نفذ</Badge>}
+                        </div>
+
+                        {/* المقاسات للون المحدد */}
+                        {selectedQty > 0 && (
+                          <div className="mt-3 pt-3 border-t">
+                            <label className="text-xs font-semibold flex items-center gap-1 mb-2">
+                              اختر المقاسات <span className="text-destructive">*</span>
+                              <Badge variant="secondary" className="text-xs mr-1">
+                                {getColorSizesQuantity(color)}/{selectedQty}
+                              </Badge>
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                              {(hasVariants ? variant.sizes : legacySizeOptions).map((size: string) => {
+                                const sizeQty = selection?.sizes.find(s => s.size === size)?.quantity || 0;
+                                return (
+                                  <div key={size} className={`flex items-center gap-1 border rounded-md px-2 py-1 ${sizeQty > 0 ? 'border-primary bg-primary/10' : ''}`}>
+                                    <span className="text-sm">{size}</span>
+                                    <div className="flex items-center gap-1">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-5 w-5"
+                                        onClick={() => decreaseSizeQuantity(color, size)}
+                                        disabled={sizeQty === 0}
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <span className="w-4 text-center text-sm font-bold">{sizeQty}</span>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-5 w-5"
+                                        onClick={() => increaseSizeQuantity(color, size)}
+                                        disabled={getColorSizesQuantity(color) >= selectedQty}
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            {getColorSizesQuantity(color) < selectedQty && (
+                              <p className="text-xs text-destructive mt-1 animate-pulse">
+                                ⚠️ يرجى اختيار {selectedQty - getColorSizesQuantity(color)} مقاس آخر
+                              </p>
+                            )}
+                          </div>
                         )}
-                      </Button>
+                      </div>
                     );
                   })}
                 </div>
-                {selectedSizes.length === 0 && (
-                  <p className="text-xs text-destructive">يرجى اختيار مقاس واحد على الأقل</p>
-                )}
-                {selectedSizes.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {selectedSizes.map((size, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        قطعة {idx + 1}: {size}
-                      </Badge>
-                    ))}
-                  </div>
+                {getTotalSelectedQuantity() < quantity && (
+                  <p className="text-xs text-destructive animate-pulse">
+                    ⚠️ يرجى اختيار {quantity - getTotalSelectedQuantity()} قطعة أخرى
+                  </p>
                 )}
               </div>
-            )}
-
-            {/* اختيار اللون */}
-            {hasColors && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold flex items-center gap-1">
-                  اللون <span className="text-destructive">*</span>
-                  <Badge variant="secondary" className="text-xs mr-2">
-                    {selectedColors.length}/{quantity}
-                  </Badge>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {colorOptions.map((color: string) => {
-                    const isSelected = selectedColors.includes(color);
-                    const count = selectedColors.filter(c => c === color).length;
-                    return (
-                      <Button
-                        key={color}
-                        variant={isSelected ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => toggleColor(color)}
-                        className={`relative ${isSelected ? "ring-2 ring-primary" : ""}`}
-                      >
-                        {color}
-                        {count > 1 && (
-                          <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 text-xs flex items-center justify-center">
-                            {count}
-                          </Badge>
-                        )}
-                      </Button>
-                    );
-                  })}
-                </div>
-                {selectedColors.length === 0 && (
-                  <p className="text-xs text-destructive">يرجى اختيار لون واحد على الأقل</p>
-                )}
-                {selectedColors.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {selectedColors.map((color, idx) => (
-                      <Badge key={idx} variant="secondary" className="text-xs">
-                        قطعة {idx + 1}: {color}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* الكمية */}
-            {stockQuantity <= (product.low_stock_threshold || 5) && stockQuantity > 0 && (
-              <Badge variant="outline" className="text-xs bg-orange-500/10 text-orange-600 border-orange-500">
-                <Flame className="w-3 h-3 ml-1 animate-pulse" />
-                الكمية محدودة - اسرع للشراء!
-              </Badge>
             )}
 
             {/* الوصف */}

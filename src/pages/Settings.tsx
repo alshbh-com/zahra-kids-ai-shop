@@ -4,10 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock, Settings as SettingsIcon } from "lucide-react";
+import { Lock, Settings as SettingsIcon, Palette } from "lucide-react";
 import { AdminDashboard } from "@/components/AdminDashboard";
 import { SocialLinks } from "@/components/SocialLinks";
+import { ColorVariantManager } from "@/components/admin/ColorVariantManager";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Settings = () => {
   const [password, setPassword] = useState("");
@@ -74,14 +76,33 @@ const Settings = () => {
           <h1 className="text-3xl font-bold">لوحة التحكم</h1>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-6">
-          <div className="lg:col-span-2">
-            <AdminDashboard />
-          </div>
-          <div className="space-y-6">
-            <SocialLinks />
-          </div>
-        </div>
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="bg-muted/50 p-1">
+            <TabsTrigger value="dashboard">
+              <SettingsIcon className="w-4 h-4 ml-2" />
+              الإحصائيات
+            </TabsTrigger>
+            <TabsTrigger value="colors">
+              <Palette className="w-4 h-4 ml-2" />
+              الألوان والمقاسات
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dashboard">
+            <div className="grid lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <AdminDashboard />
+              </div>
+              <div className="space-y-6">
+                <SocialLinks />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="colors">
+            <ColorVariantManager />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
