@@ -4,12 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Lock, Settings as SettingsIcon, Palette } from "lucide-react";
-import { AdminDashboard } from "@/components/AdminDashboard";
-import { SocialLinks } from "@/components/SocialLinks";
+import { Lock, Palette } from "lucide-react";
 import { ColorVariantManager } from "@/components/admin/ColorVariantManager";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Settings = () => {
   const [password, setPassword] = useState("");
@@ -30,7 +27,7 @@ const Settings = () => {
   const handleLogin = () => {
     if (password === adminPassword) {
       setIsAuthenticated(true);
-      toast.success("مرحباً بك في لوحة التحكم!");
+      toast.success("مرحباً بك!");
     } else {
       toast.error("كلمة المرور غير صحيحة!");
       setPassword("");
@@ -44,7 +41,7 @@ const Settings = () => {
           <CardHeader>
             <div className="flex items-center gap-3 justify-center">
               <Lock className="w-8 h-8 text-primary" />
-              <CardTitle className="text-2xl">لوحة التحكم</CardTitle>
+              <CardTitle className="text-2xl">الإعدادات</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -72,37 +69,11 @@ const Settings = () => {
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background pb-24">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-8">
-          <SettingsIcon className="w-8 h-8 text-primary" />
-          <h1 className="text-3xl font-bold">لوحة التحكم</h1>
+          <Palette className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-bold">إدارة الألوان والمقاسات</h1>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="dashboard">
-              <SettingsIcon className="w-4 h-4 ml-2" />
-              الإحصائيات
-            </TabsTrigger>
-            <TabsTrigger value="colors">
-              <Palette className="w-4 h-4 ml-2" />
-              الألوان والمقاسات
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard">
-            <div className="grid lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <AdminDashboard />
-              </div>
-              <div className="space-y-6">
-                <SocialLinks />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="colors">
-            <ColorVariantManager />
-          </TabsContent>
-        </Tabs>
+        <ColorVariantManager />
       </div>
     </div>
   );

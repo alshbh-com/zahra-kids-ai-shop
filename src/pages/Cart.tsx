@@ -313,37 +313,55 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                         
                         {/* اختيار المقاسات والألوان المتعددة */}
                         <div className="flex flex-wrap gap-3 mt-3">
-                          {/* المقاسات */}
+                          {/* المقاسات مع +/- */}
                           {item.size_options && item.size_options.length > 0 && (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2">
                               <label className="text-xs font-semibold flex items-center gap-1">
                                 المقاسات <span className="text-destructive">*</span>
                                 <Badge variant="secondary" className="text-xs mr-1">
-                                  {(item.selectedSizes || []).length}/{item.quantity}
+                                  إجمالي: {(item.selectedSizes || []).length}/{item.quantity}
                                 </Badge>
                               </label>
-                              <div className="flex flex-wrap gap-1">
+                              <div className="flex flex-wrap gap-2">
                                 {item.size_options.map((size: string) => {
-                                  const isSelected = (item.selectedSizes || []).includes(size);
+                                  const sizeCount = (item.selectedSizes || []).filter(s => s === size).length;
+                                  const totalSelected = (item.selectedSizes || []).length;
                                   return (
-                                    <Button
-                                      key={size}
-                                      variant={isSelected ? "default" : "outline"}
-                                      size="sm"
-                                      className={`h-7 px-2 text-xs ${isSelected ? "ring-2 ring-primary" : ""}`}
-                                      onClick={() => {
-                                        const currentSizes = item.selectedSizes || [];
-                                        if (isSelected) {
-                                          updateItemOptions(item.id, currentSizes.filter(s => s !== size), item.selectedColors);
-                                        } else if (currentSizes.length < item.quantity) {
-                                          updateItemOptions(item.id, [...currentSizes, size], item.selectedColors);
-                                        } else {
-                                          toast.error(`يمكنك اختيار ${item.quantity} مقاس/مقاسات فقط`);
-                                        }
-                                      }}
-                                    >
-                                      {size}
-                                    </Button>
+                                    <div key={size} className="flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
+                                      <span className="text-xs px-2 min-w-[40px] text-center">{size}</span>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        disabled={sizeCount === 0}
+                                        onClick={() => {
+                                          const currentSizes = [...(item.selectedSizes || [])];
+                                          const idx = currentSizes.lastIndexOf(size);
+                                          if (idx > -1) {
+                                            currentSizes.splice(idx, 1);
+                                            updateItemOptions(item.id, currentSizes, item.selectedColors);
+                                          }
+                                        }}
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <span className="w-6 text-center text-sm font-bold">{sizeCount}</span>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        disabled={totalSelected >= item.quantity}
+                                        onClick={() => {
+                                          if (totalSelected < item.quantity) {
+                                            updateItemOptions(item.id, [...(item.selectedSizes || []), size], item.selectedColors);
+                                          } else {
+                                            toast.error(`الحد الأقصى ${item.quantity} قطعة`);
+                                          }
+                                        }}
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   );
                                 })}
                               </div>
@@ -353,37 +371,55 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                             </div>
                           )}
                           
-                          {/* الألوان */}
+                          {/* الألوان مع +/- */}
                           {item.color_options && item.color_options.length > 0 && (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2">
                               <label className="text-xs font-semibold flex items-center gap-1">
                                 الألوان <span className="text-destructive">*</span>
                                 <Badge variant="secondary" className="text-xs mr-1">
-                                  {(item.selectedColors || []).length}/{item.quantity}
+                                  إجمالي: {(item.selectedColors || []).length}/{item.quantity}
                                 </Badge>
                               </label>
-                              <div className="flex flex-wrap gap-1">
+                              <div className="flex flex-wrap gap-2">
                                 {item.color_options.map((color: string) => {
-                                  const isSelected = (item.selectedColors || []).includes(color);
+                                  const colorCount = (item.selectedColors || []).filter(c => c === color).length;
+                                  const totalSelected = (item.selectedColors || []).length;
                                   return (
-                                    <Button
-                                      key={color}
-                                      variant={isSelected ? "default" : "outline"}
-                                      size="sm"
-                                      className={`h-7 px-2 text-xs ${isSelected ? "ring-2 ring-primary" : ""}`}
-                                      onClick={() => {
-                                        const currentColors = item.selectedColors || [];
-                                        if (isSelected) {
-                                          updateItemOptions(item.id, item.selectedSizes, currentColors.filter(c => c !== color));
-                                        } else if (currentColors.length < item.quantity) {
-                                          updateItemOptions(item.id, item.selectedSizes, [...currentColors, color]);
-                                        } else {
-                                          toast.error(`يمكنك اختيار ${item.quantity} لون/ألوان فقط`);
-                                        }
-                                      }}
-                                    >
-                                      {color}
-                                    </Button>
+                                    <div key={color} className="flex items-center gap-1 border rounded-lg p-1 bg-muted/30">
+                                      <span className="text-xs px-2 min-w-[50px] text-center">{color}</span>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        disabled={colorCount === 0}
+                                        onClick={() => {
+                                          const currentColors = [...(item.selectedColors || [])];
+                                          const idx = currentColors.lastIndexOf(color);
+                                          if (idx > -1) {
+                                            currentColors.splice(idx, 1);
+                                            updateItemOptions(item.id, item.selectedSizes, currentColors);
+                                          }
+                                        }}
+                                      >
+                                        <Minus className="h-3 w-3" />
+                                      </Button>
+                                      <span className="w-6 text-center text-sm font-bold">{colorCount}</span>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6"
+                                        disabled={totalSelected >= item.quantity}
+                                        onClick={() => {
+                                          if (totalSelected < item.quantity) {
+                                            updateItemOptions(item.id, item.selectedSizes, [...(item.selectedColors || []), color]);
+                                          } else {
+                                            toast.error(`الحد الأقصى ${item.quantity} قطعة`);
+                                          }
+                                        }}
+                                      >
+                                        <Plus className="h-3 w-3" />
+                                      </Button>
+                                    </div>
                                   );
                                 })}
                               </div>
