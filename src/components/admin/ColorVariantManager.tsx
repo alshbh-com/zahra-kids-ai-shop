@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -9,19 +9,27 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Palette, Save, X } from "lucide-react";
 import { toast } from "sonner";
 
+interface SizePrice {
+  size: string;
+  extra_price: number;
+}
+
 interface ColorVariant {
   id: string;
   product_id: string;
   color: string;
   sizes: string[];
   stock: number;
+  size_prices?: SizePrice[];
 }
 
 export const ColorVariantManager = () => {
   const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [newColor, setNewColor] = useState("");
-  const [newSizes, setNewSizes] = useState("");
+  const [selectedColor, setSelectedColor] = useState<string>("");
   const [newStock, setNewStock] = useState("");
+  const [sizes, setSizes] = useState<SizePrice[]>([]);
+  const [newSizeName, setNewSizeName] = useState("");
+  const [newSizePrice, setNewSizePrice] = useState("");
   const [editingVariant, setEditingVariant] = useState<ColorVariant | null>(null);
 
   const queryClient = useQueryClient();
@@ -31,12 +39,15 @@ export const ColorVariantManager = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name_ar, name")
+        .select("id, name_ar, name, color_options")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
   });
+
+  const selectedProduct = products?.find(p => p.id === selectedProductId);
+  const availableColors: string[] = selectedProduct?.color_options || [];
 
   const { data: variants, isLoading: variantsLoading } = useQuery({
     queryKey: ["color-variants", selectedProductId],
@@ -48,16 +59,30 @@ export const ColorVariantManager = () => {
         .eq("product_id", selectedProductId)
         .order("created_at", { ascending: true });
       if (error) throw error;
-      return data as ColorVariant[];
+      return (data || []).map(item => ({
+        ...item,
+        size_prices: (Array.isArray(item.size_prices) ? item.size_prices : []) as unknown as SizePrice[]
+      })) as ColorVariant[];
     },
     enabled: !!selectedProductId,
   });
 
+  // الألوان المضافة بالفعل
+  const usedColors = variants?.map(v => v.color) || [];
+  // الألوان المتاحة للإضافة
+  const colorsToAdd = availableColors.filter(c => !usedColors.includes(c));
+
   const addVariantMutation = useMutation({
-    mutationFn: async (variantData: { product_id: string; color: string; sizes: string[]; stock: number }) => {
+    mutationFn: async (variantData: { product_id: string; color: string; sizes: string[]; stock: number; size_prices: SizePrice[] }) => {
       const { data, error } = await supabase
         .from("product_color_variants")
-        .insert([variantData])
+        .insert([{
+          product_id: variantData.product_id,
+          color: variantData.color,
+          sizes: variantData.sizes,
+          stock: variantData.stock,
+          size_prices: JSON.parse(JSON.stringify(variantData.size_prices))
+        }])
         .select()
         .single();
       if (error) throw error;
@@ -78,11 +103,16 @@ export const ColorVariantManager = () => {
   });
 
   const updateVariantMutation = useMutation({
-    mutationFn: async (variantData: { id: string; color: string; sizes: string[]; stock: number }) => {
+    mutationFn: async (variantData: { id: string; color: string; sizes: string[]; stock: number; size_prices: SizePrice[] }) => {
       const { id, ...updateData } = variantData;
       const { data, error } = await supabase
         .from("product_color_variants")
-        .update(updateData)
+        .update({
+          color: updateData.color,
+          sizes: updateData.sizes,
+          stock: updateData.stock,
+          size_prices: JSON.parse(JSON.stringify(updateData.size_prices))
+        })
         .eq("id", id)
         .select()
         .single();
@@ -118,53 +148,76 @@ export const ColorVariantManager = () => {
   });
 
   const resetForm = () => {
-    setNewColor("");
-    setNewSizes("");
+    setSelectedColor("");
     setNewStock("");
+    setSizes([]);
+    setNewSizeName("");
+    setNewSizePrice("");
+    setEditingVariant(null);
   };
 
-  const handleAddVariant = () => {
+  // إضافة مقاس جديد
+  const handleAddSize = () => {
+    if (!newSizeName.trim()) {
+      toast.error("برجاء إدخال اسم المقاس");
+      return;
+    }
+    if (sizes.some(s => s.size === newSizeName.trim())) {
+      toast.error("هذا المقاس موجود بالفعل");
+      return;
+    }
+    setSizes([...sizes, { size: newSizeName.trim(), extra_price: parseInt(newSizePrice) || 0 }]);
+    setNewSizeName("");
+    setNewSizePrice("");
+  };
+
+  // حذف مقاس
+  const handleRemoveSize = (sizeToRemove: string) => {
+    setSizes(sizes.filter(s => s.size !== sizeToRemove));
+  };
+
+  const handleSaveVariant = () => {
     if (!selectedProductId) {
       toast.error("برجاء اختيار منتج أولاً");
       return;
     }
-    if (!newColor.trim()) {
-      toast.error("برجاء إدخال اسم اللون");
+    if (!selectedColor && !editingVariant) {
+      toast.error("برجاء اختيار لون");
       return;
     }
 
-    const sizesArray = newSizes
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s);
+    const sizeNames = sizes.map(s => s.size);
 
     if (editingVariant) {
       updateVariantMutation.mutate({
         id: editingVariant.id,
-        color: newColor.trim(),
-        sizes: sizesArray,
+        color: editingVariant.color,
+        sizes: sizeNames,
         stock: parseInt(newStock) || 0,
+        size_prices: sizes,
       });
     } else {
       addVariantMutation.mutate({
         product_id: selectedProductId,
-        color: newColor.trim(),
-        sizes: sizesArray,
+        color: selectedColor,
+        sizes: sizeNames,
         stock: parseInt(newStock) || 0,
+        size_prices: sizes,
       });
     }
   };
 
   const handleEditVariant = (variant: ColorVariant) => {
     setEditingVariant(variant);
-    setNewColor(variant.color);
-    setNewSizes(variant.sizes.join(", "));
+    setSelectedColor(variant.color);
     setNewStock(variant.stock.toString());
-  };
-
-  const handleCancelEdit = () => {
-    setEditingVariant(null);
-    resetForm();
+    // تحميل المقاسات مع الأسعار
+    if (variant.size_prices && variant.size_prices.length > 0) {
+      setSizes(variant.size_prices);
+    } else {
+      // إذا كانت المقاسات موجودة بدون أسعار
+      setSizes(variant.sizes.map(s => ({ size: s, extra_price: 0 })));
+    }
   };
 
   const handleDeleteVariant = (variantId: string) => {
@@ -185,7 +238,7 @@ export const ColorVariantManager = () => {
         {/* اختيار المنتج */}
         <div>
           <label className="text-sm font-medium mb-2 block">اختر المنتج</label>
-          <Select value={selectedProductId} onValueChange={setSelectedProductId}>
+          <Select value={selectedProductId} onValueChange={(val) => { setSelectedProductId(val); resetForm(); }}>
             <SelectTrigger className="bg-background">
               <SelectValue placeholder="اختر منتج لإدارة ألوانه" />
             </SelectTrigger>
@@ -201,47 +254,116 @@ export const ColorVariantManager = () => {
 
         {selectedProductId && (
           <>
-            {/* إضافة لون جديد */}
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-              <h4 className="font-medium">{editingVariant ? "تعديل اللون" : "إضافة لون جديد"}</h4>
-              <div className="grid md:grid-cols-3 gap-3">
+            {/* إضافة/تعديل لون */}
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+              <h4 className="font-medium">{editingVariant ? `تعديل لون: ${editingVariant.color}` : "إضافة لون جديد"}</h4>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* اختيار اللون */}
+                {!editingVariant && (
+                  <div>
+                    <label className="text-xs text-muted-foreground block mb-1">اللون *</label>
+                    {colorsToAdd.length > 0 ? (
+                      <Select value={selectedColor} onValueChange={setSelectedColor}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="اختر لون" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border z-50">
+                          {colorsToAdd.map((color) => (
+                            <SelectItem key={color} value={color}>
+                              {color}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <p className="text-sm text-muted-foreground p-2 border rounded bg-background">
+                        {availableColors.length === 0 
+                          ? "⚠️ لا توجد ألوان مضافة لهذا المنتج من الأدمن الخارجي"
+                          : "✅ تم إضافة جميع الألوان المتاحة"}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* المخزون */}
                 <div>
-                  <label className="text-xs text-muted-foreground">اللون *</label>
-                  <Input
-                    value={newColor}
-                    onChange={(e) => setNewColor(e.target.value)}
-                    placeholder="أحمر، أسود، أبيض..."
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">المقاسات (مفصولة بفاصلة)</label>
-                  <Input
-                    value={newSizes}
-                    onChange={(e) => setNewSizes(e.target.value)}
-                    placeholder="S, M, L, XL"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">المخزون</label>
+                  <label className="text-xs text-muted-foreground block mb-1">المخزون</label>
                   <Input
                     type="number"
                     value={newStock}
                     onChange={(e) => setNewStock(e.target.value)}
-                    placeholder="50"
+                    placeholder="الكمية المتاحة"
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
+
+              {/* إضافة المقاسات */}
+              <div className="space-y-3">
+                <label className="text-sm font-medium">المقاسات وأسعارها الإضافية</label>
+                
+                {/* المقاسات المضافة */}
+                {sizes.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {sizes.map((sizeItem) => (
+                      <Badge
+                        key={sizeItem.size}
+                        variant="secondary"
+                        className="flex items-center gap-2 py-1.5 px-3"
+                      >
+                        <span>{sizeItem.size}</span>
+                        {sizeItem.extra_price > 0 && (
+                          <span className="text-green-600 font-bold">+{sizeItem.extra_price}ج</span>
+                        )}
+                        <button
+                          onClick={() => handleRemoveSize(sizeItem.size)}
+                          className="text-destructive hover:text-destructive/80"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+
+                {/* إضافة مقاس جديد */}
+                <div className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <label className="text-xs text-muted-foreground">اسم المقاس</label>
+                    <Input
+                      value={newSizeName}
+                      onChange={(e) => setNewSizeName(e.target.value)}
+                      placeholder="مثال: XL, XXL, 3 سنين"
+                      onKeyPress={(e) => e.key === "Enter" && handleAddSize()}
+                    />
+                  </div>
+                  <div className="w-28">
+                    <label className="text-xs text-muted-foreground">زيادة السعر (اختياري)</label>
+                    <Input
+                      type="number"
+                      value={newSizePrice}
+                      onChange={(e) => setNewSizePrice(e.target.value)}
+                      placeholder="0"
+                      onKeyPress={(e) => e.key === "Enter" && handleAddSize()}
+                    />
+                  </div>
+                  <Button onClick={handleAddSize} size="icon" variant="outline" className="shrink-0">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* أزرار الحفظ/الإلغاء */}
+              <div className="flex gap-2 pt-2">
                 <Button
-                  onClick={handleAddVariant}
-                  disabled={addVariantMutation.isPending || updateVariantMutation.isPending}
-                  size="sm"
+                  onClick={handleSaveVariant}
+                  disabled={addVariantMutation.isPending || updateVariantMutation.isPending || (!editingVariant && !selectedColor)}
                 >
                   {editingVariant ? <Save className="w-4 h-4 ml-2" /> : <Plus className="w-4 h-4 ml-2" />}
                   {editingVariant ? "حفظ التعديلات" : "إضافة اللون"}
                 </Button>
                 {editingVariant && (
-                  <Button onClick={handleCancelEdit} variant="outline" size="sm">
+                  <Button onClick={resetForm} variant="outline">
                     <X className="w-4 h-4 ml-2" />
                     إلغاء
                   </Button>
@@ -251,7 +373,7 @@ export const ColorVariantManager = () => {
 
             {/* قائمة الألوان */}
             <div className="space-y-3">
-              <h4 className="font-medium">الألوان المتاحة</h4>
+              <h4 className="font-medium">الألوان المتاحة ({variants?.length || 0})</h4>
               {variantsLoading ? (
                 <p className="text-muted-foreground text-sm">جاري التحميل...</p>
               ) : variants && variants.length > 0 ? (
@@ -259,27 +381,32 @@ export const ColorVariantManager = () => {
                   {variants.map((variant) => (
                     <div
                       key={variant.id}
-                      className={`flex items-center justify-between p-3 border rounded-lg ${
+                      className={`flex flex-col md:flex-row md:items-center justify-between p-3 border rounded-lg gap-3 ${
                         variant.stock === 0 ? "bg-destructive/10 border-destructive/30" : "bg-background"
                       }`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <Badge
                           variant="outline"
-                          className={variant.stock === 0 ? "opacity-50 line-through" : ""}
+                          className={`text-base ${variant.stock === 0 ? "opacity-50 line-through" : ""}`}
                         >
                           {variant.color}
                         </Badge>
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">المقاسات: </span>
+                        <div className="flex flex-wrap gap-1">
                           {variant.sizes.length > 0 ? (
-                            variant.sizes.map((size, i) => (
-                              <Badge key={i} variant="secondary" className="text-xs mr-1">
-                                {size}
-                              </Badge>
-                            ))
+                            variant.sizes.map((size, i) => {
+                              const priceInfo = variant.size_prices?.find(sp => sp.size === size);
+                              return (
+                                <Badge key={i} variant="secondary" className="text-xs">
+                                  {size}
+                                  {priceInfo && priceInfo.extra_price > 0 && (
+                                    <span className="text-green-600 mr-1">+{priceInfo.extra_price}ج</span>
+                                  )}
+                                </Badge>
+                              );
+                            })
                           ) : (
-                            <span className="text-muted-foreground">لم يتم تحديد مقاسات</span>
+                            <span className="text-xs text-muted-foreground">لا توجد مقاسات</span>
                           )}
                         </div>
                         <Badge

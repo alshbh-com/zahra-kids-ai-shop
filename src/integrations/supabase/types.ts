@@ -387,6 +387,7 @@ export type Database = {
           created_at: string | null
           id: string
           product_id: string
+          size_prices: Json | null
           sizes: string[] | null
           stock: number | null
           updated_at: string | null
@@ -396,6 +397,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           product_id: string
+          size_prices?: Json | null
           sizes?: string[] | null
           stock?: number | null
           updated_at?: string | null
@@ -405,6 +407,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           product_id?: string
+          size_prices?: Json | null
           sizes?: string[] | null
           stock?: number | null
           updated_at?: string | null
