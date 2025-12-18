@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,26 +10,12 @@ import { Facebook, Instagram, Ruler, Sparkles } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
-import SpinWheel from "@/components/SpinWheel";
+
 
 const Home = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
-  const [showSpinWheel, setShowSpinWheel] = useState(false);
-
-  // Check if wheel should be shown
-  useEffect(() => {
-    const wheelShown = localStorage.getItem('wheelShown');
-    const spinCount = parseInt(localStorage.getItem('spinCount') || '0', 10);
-    
-    // Show wheel if never completed (not shown=true) and spin count < 2
-    if (!wheelShown && spinCount < 2) {
-      // Delay a bit for better UX
-      const timer = setTimeout(() => setShowSpinWheel(true), 1500);
-      return () => clearTimeout(timer);
-    }
-  }, []);
 
   const { data: products } = useQuery({
     queryKey: ["products"],
@@ -255,11 +241,6 @@ const Home = () => {
 
       {/* AI Chat Assistant */}
       <AiChatAssistant />
-      
-      {/* Spin Wheel Popup */}
-      {showSpinWheel && (
-        <SpinWheel onClose={() => setShowSpinWheel(false)} />
-      )}
     </div>
   );
 };
