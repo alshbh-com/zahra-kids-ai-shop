@@ -289,7 +289,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              navigate(`/product/${product.id}`);
+              setIsModalOpen(true);
             }}
           >
             <Package className="w-4 h-4 ml-2" />

@@ -115,7 +115,9 @@ const Cart = () => {
         product_id: item.id,
         quantity: item.quantity,
         price: item.price,
-        product_details: item.name
+        product_details: item.name,
+        color: item.colors?.length > 0 ? item.colors.join(', ') : null,
+        size: item.sizes?.length > 0 ? item.sizes.join(', ') : null
       }));
 
       const { error: itemsError } = await supabase
@@ -155,6 +157,12 @@ const Cart = () => {
   const handleThankYouComplete = () => {
     const itemsDetails = cart.map((item, index) => {
       let details = `${index + 1}. *${item.name}*\n   • الكمية: ${item.quantity}`;
+      if (item.selectedColors && item.selectedColors.length > 0) {
+        details += `\n   • الألوان: ${item.selectedColors.join(', ')}`;
+      }
+      if (item.selectedSizes && item.selectedSizes.length > 0) {
+        details += `\n   • المقاسات: ${item.selectedSizes.join(', ')}`;
+      }
       details += `\n   • السعر للقطعة: ${item.discount_price || item.price} جنيه`;
       details += `\n   • الإجمالي: ${(item.discount_price || item.price) * item.quantity} جنيه`;
       return details;
@@ -231,7 +239,9 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
         id: item.id,
         name: item.name,
         quantity: item.quantity,
-        price: item.discount_price || item.price
+        price: item.discount_price || item.price,
+        colors: item.selectedColors || [],
+        sizes: item.selectedSizes || []
       })),
       productsTotal: totalAmount,
       shipping: shippingCost
@@ -280,6 +290,22 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{item.name}</h3>
                         <p className="text-sm text-muted-foreground">{item.name_en}</p>
+                        
+                        {/* عرض الألوان والمقاسات المختارة */}
+                        {((item.selectedColors && item.selectedColors.length > 0) || (item.selectedSizes && item.selectedSizes.length > 0)) && (
+                          <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                            {item.selectedColors && item.selectedColors.length > 0 && (
+                              <span className="bg-primary/10 text-primary px-2 py-1 rounded-full">
+                                الألوان: {item.selectedColors.join(', ')}
+                              </span>
+                            )}
+                            {item.selectedSizes && item.selectedSizes.length > 0 && (
+                              <span className="bg-secondary/50 text-secondary-foreground px-2 py-1 rounded-full">
+                                المقاسات: {item.selectedSizes.join(', ')}
+                              </span>
+                            )}
+                          </div>
+                        )}
                         
                         <div className="flex items-center gap-4 mt-3">
                           <div className="flex items-center gap-2 border rounded-lg p-1">
