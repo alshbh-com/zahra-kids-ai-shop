@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Minus, Plus, Trash2, ShoppingBag, Package, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "@/contexts/CartContext";
@@ -17,7 +16,7 @@ import { ExitRescueModal } from "@/components/ExitRescueModal";
 
 const Cart = () => {
   const navigate = useNavigate();
-  const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount, refreshStock, updateItemOptions } = useCart();
+  const { items: cart, updateQuantity, removeFromCart, clearCart, totalAmount, refreshStock } = useCart();
   const [customerName, setCustomerName] = useState("");
 
   // تحديث المخزون عند فتح السلة
@@ -31,7 +30,7 @@ const Cart = () => {
   const [selectedGovernorate, setSelectedGovernorate] = useState("");
   const [showThankYou, setShowThankYou] = useState(false);
   const [wheelDiscount, setWheelDiscount] = useState<{discount: number, minOrder: number} | null>(null);
-  const [exitDiscount, setExitDiscount] = useState(0); // خصم الخروج الحقيقي 2%
+  const [exitDiscount, setExitDiscount] = useState(0);
 
   // Check for wheel discount
   useEffect(() => {
@@ -74,7 +73,7 @@ const Cart = () => {
 
   // Handle exit rescue discount acceptance
   const handleExitDiscountAccept = () => {
-    setExitDiscount(2); // تفعيل خصم 2% الحقيقي
+    setExitDiscount(2);
   };
 
   const queryClient = useQueryClient();
@@ -95,12 +94,12 @@ const Cart = () => {
       
       if (customerError) throw customerError;
 
-      // ثانياً: إنشاء الطلب - total_amount بدون الشحن
+      // ثانياً: إنشاء الطلب
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .insert([{
           customer_id: customer.id,
-          total_amount: orderData.productsTotal, // سعر المنتجات فقط بدون الشحن
+          total_amount: orderData.productsTotal,
           shipping_cost: orderData.shipping,
           notes: orderData.notes,
           order_details: JSON.stringify(orderData.items)
@@ -110,20 +109,14 @@ const Cart = () => {
       
       if (orderError) throw orderError;
 
-      // ثالثاً: إنشاء order_items مع المقاسات والألوان المتعددة
-      const orderItems = orderData.items.map((item: any) => {
-        const sizesText = item.selectedSizes?.length > 0 ? item.selectedSizes.join(', ') : null;
-        const colorsText = item.selectedColors?.length > 0 ? item.selectedColors.join(', ') : null;
-        return {
-          order_id: order.id,
-          product_id: item.id,
-          quantity: item.quantity,
-          price: item.price,
-          size: sizesText,
-          color: colorsText,
-          product_details: `${item.name}${sizesText ? ` - مقاسات: ${sizesText}` : ''}${colorsText ? ` - ألوان: ${colorsText}` : ''}`
-        };
-      });
+      // ثالثاً: إنشاء order_items
+      const orderItems = orderData.items.map((item: any) => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price,
+        product_details: item.name
+      }));
 
       const { error: itemsError } = await supabase
         .from("order_items")
@@ -160,15 +153,8 @@ const Cart = () => {
   });
 
   const handleThankYouComplete = () => {
-    // بناء تفاصيل المنتجات مع المقاسات والألوان المتعددة
     const itemsDetails = cart.map((item, index) => {
       let details = `${index + 1}. *${item.name}*\n   • الكمية: ${item.quantity}`;
-      if (item.selectedSizes && item.selectedSizes.length > 0) {
-        details += `\n   • المقاسات: ${item.selectedSizes.join(', ')}`;
-      }
-      if (item.selectedColors && item.selectedColors.length > 0) {
-        details += `\n   • الألوان: ${item.selectedColors.join(', ')}`;
-      }
       details += `\n   • السعر للقطعة: ${item.discount_price || item.price} جنيه`;
       details += `\n   • الإجمالي: ${(item.discount_price || item.price) * item.quantity} جنيه`;
       return details;
@@ -235,20 +221,6 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
       return;
     }
 
-    // التحقق من اختيار المقاس واللون لكل منتج
-    const missingSelections = cart.filter(item => {
-      const hasSizes = item.size_options && item.size_options.length > 0;
-      const hasColors = item.color_options && item.color_options.length > 0;
-      const hasSelectedSizes = item.selectedSizes && item.selectedSizes.length > 0;
-      const hasSelectedColors = item.selectedColors && item.selectedColors.length > 0;
-      return (hasSizes && !hasSelectedSizes) || (hasColors && !hasSelectedColors);
-    });
-
-    if (missingSelections.length > 0) {
-      toast.error(`⚠️ يرجى اختيار المقاس واللون لجميع المنتجات قبل إتمام الطلب`);
-      return;
-    }
-
     createOrderMutation.mutate({
       customerName,
       customerPhone,
@@ -259,11 +231,9 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
         id: item.id,
         name: item.name,
         quantity: item.quantity,
-        price: item.discount_price || item.price,
-        selectedSizes: item.selectedSizes,
-        selectedColors: item.selectedColors
+        price: item.discount_price || item.price
       })),
-      productsTotal: totalAmount, // سعر المنتجات فقط
+      productsTotal: totalAmount,
       shipping: shippingCost
     });
   };
@@ -299,7 +269,7 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
               </Card>
             ) : (
               cart.map((item) => (
-                <Card key={`${item.id}-${item.selectedSize}-${item.selectedColor}`}>
+                <Card key={item.id}>
                   <CardContent className="p-4">
                     <div className="flex gap-4">
                       <img
@@ -310,167 +280,6 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
                       <div className="flex-1">
                         <h3 className="font-semibold text-lg">{item.name}</h3>
                         <p className="text-sm text-muted-foreground">{item.name_en}</p>
-                        
-                        {/* اختيار المقاسات والألوان بشكل واضح */}
-                        <div className="space-y-4 mt-4">
-                          {/* المقاسات */}
-                          {item.size_options && item.size_options.length > 0 && (
-                            <div className="p-3 border rounded-lg bg-muted/20">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-bold flex items-center gap-1">
-                                  📏 اختر المقاسات <span className="text-destructive">*</span>
-                                </span>
-                                <Badge variant={
-                                  (item.selectedSizes || []).length === item.quantity ? "default" : "destructive"
-                                } className="text-xs">
-                                  {(item.selectedSizes || []).length} / {item.quantity} قطعة
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {item.size_options.map((size: string) => {
-                                  const sizeCount = (item.selectedSizes || []).filter(s => s === size).length;
-                                  const totalSelected = (item.selectedSizes || []).length;
-                                  return (
-                                    <div 
-                                      key={size} 
-                                      className={`flex items-center justify-between border-2 rounded-lg p-2 ${
-                                        sizeCount > 0 ? 'border-primary bg-primary/10' : 'border-border'
-                                      }`}
-                                    >
-                                      <span className="text-sm font-medium">{size}</span>
-                                      <div className="flex items-center gap-1">
-                                        <Button
-                                          size="icon"
-                                          variant="outline"
-                                          className="h-7 w-7 rounded-full"
-                                          disabled={sizeCount === 0}
-                                          onClick={() => {
-                                            const currentSizes = [...(item.selectedSizes || [])];
-                                            const idx = currentSizes.lastIndexOf(size);
-                                            if (idx > -1) {
-                                              currentSizes.splice(idx, 1);
-                                              updateItemOptions(item.id, currentSizes, item.selectedColors);
-                                            }
-                                          }}
-                                        >
-                                          <Minus className="h-3 w-3" />
-                                        </Button>
-                                        <span className="w-6 text-center font-bold">{sizeCount}</span>
-                                        <Button
-                                          size="icon"
-                                          variant="outline"
-                                          className="h-7 w-7 rounded-full"
-                                          disabled={totalSelected >= item.quantity}
-                                          onClick={() => {
-                                            if (totalSelected < item.quantity) {
-                                              updateItemOptions(item.id, [...(item.selectedSizes || []), size], item.selectedColors);
-                                            } else {
-                                              toast.error(`اخترت ${item.quantity} قطعة بالفعل`);
-                                            }
-                                          }}
-                                        >
-                                          <Plus className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              {(!item.selectedSizes || item.selectedSizes.length < item.quantity) && (
-                                <p className="text-xs text-destructive mt-2">
-                                  ⚠️ اختر {item.quantity - (item.selectedSizes?.length || 0)} مقاس إضافي
-                                </p>
-                              )}
-                            </div>
-                          )}
-                          
-                          {/* الألوان */}
-                          {item.color_options && item.color_options.length > 0 && (
-                            <div className="p-3 border rounded-lg bg-muted/20">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-bold flex items-center gap-1">
-                                  🎨 اختر الألوان <span className="text-destructive">*</span>
-                                </span>
-                                <Badge variant={
-                                  (item.selectedColors || []).length === item.quantity ? "default" : "destructive"
-                                } className="text-xs">
-                                  {(item.selectedColors || []).length} / {item.quantity} قطعة
-                                </Badge>
-                              </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {item.color_options.map((color: string) => {
-                                  const colorCount = (item.selectedColors || []).filter(c => c === color).length;
-                                  const totalSelected = (item.selectedColors || []).length;
-                                  return (
-                                    <div 
-                                      key={color} 
-                                      className={`flex items-center justify-between border-2 rounded-lg p-2 ${
-                                        colorCount > 0 ? 'border-primary bg-primary/10' : 'border-border'
-                                      }`}
-                                    >
-                                      <span className="text-sm font-medium">{color}</span>
-                                      <div className="flex items-center gap-1">
-                                        <Button
-                                          size="icon"
-                                          variant="outline"
-                                          className="h-7 w-7 rounded-full"
-                                          disabled={colorCount === 0}
-                                          onClick={() => {
-                                            const currentColors = [...(item.selectedColors || [])];
-                                            const idx = currentColors.lastIndexOf(color);
-                                            if (idx > -1) {
-                                              currentColors.splice(idx, 1);
-                                              updateItemOptions(item.id, item.selectedSizes, currentColors);
-                                            }
-                                          }}
-                                        >
-                                          <Minus className="h-3 w-3" />
-                                        </Button>
-                                        <span className="w-6 text-center font-bold">{colorCount}</span>
-                                        <Button
-                                          size="icon"
-                                          variant="outline"
-                                          className="h-7 w-7 rounded-full"
-                                          disabled={totalSelected >= item.quantity}
-                                          onClick={() => {
-                                            if (totalSelected < item.quantity) {
-                                              updateItemOptions(item.id, item.selectedSizes, [...(item.selectedColors || []), color]);
-                                            } else {
-                                              toast.error(`اخترت ${item.quantity} قطعة بالفعل`);
-                                            }
-                                          }}
-                                        >
-                                          <Plus className="h-3 w-3" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                              {(!item.selectedColors || item.selectedColors.length < item.quantity) && (
-                                <p className="text-xs text-destructive mt-2">
-                                  ⚠️ اختر {item.quantity - (item.selectedColors?.length || 0)} لون إضافي
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* عرض الاختيارات الحالية */}
-                        {((item.selectedSizes && item.selectedSizes.length > 0) || (item.selectedColors && item.selectedColors.length > 0)) && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {item.selectedSizes && item.selectedSizes.length > 0 && (
-                              <Badge variant="secondary" className="text-xs bg-primary/10">
-                                المقاسات: {item.selectedSizes.join(', ')}
-                              </Badge>
-                            )}
-                            {item.selectedColors && item.selectedColors.length > 0 && (
-                              <Badge variant="secondary" className="text-xs bg-primary/10">
-                                الألوان: {item.selectedColors.join(', ')}
-                              </Badge>
-                            )}
-                          </div>
-                        )}
                         
                         <div className="flex items-center gap-4 mt-3">
                           <div className="flex items-center gap-2 border rounded-lg p-1">
