@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Share2, Eye, Flame, Clock, ShoppingCart, Heart, Award, Gift, Timer } from "lucide-react";
+import { Star, Share2, Eye, Flame, Clock, Heart, Package } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "@/contexts/CartContext";
@@ -283,44 +283,28 @@ export const ProductCard = ({ product }: ProductCardProps) => {
           </Badge>
         )}
 
-        <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
           <Button 
-            className="w-full bg-gradient-to-r from-primary to-accent" 
+            className="flex-1 bg-gradient-to-r from-primary to-accent" 
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              addToCart(product, [], []);
-              navigate('/cart');
+              navigate(`/product/${product.id}`);
             }}
-            disabled={stockQuantity === 0}
           >
-            <ShoppingCart className="w-4 h-4 ml-2" />
-            {stockQuantity === 0 ? 'نفذت الكمية' : 'اضغط للشراء'}
+            <Package className="w-4 h-4 ml-2" />
+            تفاصيل المنتج
           </Button>
-          <div className="flex gap-2">
-            <Button 
-              className="flex-1" 
-              size="sm"
-              variant="outline"
-              onClick={(e) => {
-                e.stopPropagation();
-                addToCart(product, [], []);
-              }}
-              disabled={stockQuantity === 0}
-            >
-              وضع في السلة
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleShare();
-              }}
-            >
-              <Share2 className="w-4 h-4" />
-            </Button>
-          </div>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleShare();
+            }}
+          >
+            <Share2 className="w-4 h-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>
