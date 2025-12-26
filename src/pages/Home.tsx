@@ -6,11 +6,13 @@ import { ProductCard } from "@/components/ProductCard";
 import { OfferBanner } from "@/components/OfferBanner";
 import { AiChatAssistant } from "@/components/AiChatAssistant";
 import { SearchBar } from "@/components/SearchBar";
-import { Facebook, Instagram, Ruler, Sparkles } from "lucide-react";
+import { SnowEffect } from "@/components/SnowEffect";
+import { ChristmasDecorations } from "@/components/ChristmasDecorations";
+import { ChristmasBanner } from "@/components/ChristmasBanner";
+import { Facebook, Instagram, Ruler, Sparkles, TreePine, Gift, Star } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
-
 
 const Home = () => {
   const navigate = useNavigate();
@@ -67,24 +69,61 @@ const Home = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background pb-24">
-      {/* Hero Section with Logo */}
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background pb-24 christmas-pattern relative overflow-hidden">
+      {/* Snow Effect */}
+      <SnowEffect />
+      
+      {/* Christmas Decorations */}
+      <ChristmasDecorations />
+
+      {/* Hero Section with Christmas Theme */}
       <div className="relative overflow-hidden">
         <div 
-          className="absolute inset-0 opacity-10"
-          style={{ background: "var(--gradient-primary)" }}
+          className="absolute inset-0 opacity-20"
+          style={{ background: "var(--gradient-festive)" }}
         />
-        <div className="relative container mx-auto px-4 py-8">
-          <div className="flex flex-col items-center gap-4">
-            <img 
-              src={logo} 
-              alt="Zahra Fashion" 
-              className="w-40 h-40 object-contain drop-shadow-lg animate-in fade-in zoom-in duration-500"
+        {/* Christmas lights at top */}
+        <div className="absolute top-0 left-0 right-0 h-4 flex justify-around items-center">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div
+              key={i}
+              className="w-3 h-3 rounded-full animate-twinkle"
+              style={{
+                backgroundColor: i % 3 === 0 ? "hsl(0, 80%, 50%)" : i % 3 === 1 ? "hsl(140, 60%, 40%)" : "hsl(45, 90%, 55%)",
+                animationDelay: `${i * 0.1}s`,
+                boxShadow: `0 0 10px currentColor`,
+              }}
             />
-            <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-              مرحباً بك في متجر زهرة
+          ))}
+        </div>
+        
+        <div className="relative container mx-auto px-4 py-8 pt-12">
+          <div className="flex flex-col items-center gap-4">
+            {/* Christmas tree icon above logo */}
+            <div className="flex items-center gap-2 animate-float">
+              <TreePine className="w-8 h-8 text-secondary" />
+              <Star className="w-6 h-6 text-accent fill-current animate-twinkle" />
+              <TreePine className="w-8 h-8 text-secondary" />
+            </div>
+            
+            <div className="relative">
+              <img 
+                src={logo} 
+                alt="Zahra Fashion" 
+                className="w-40 h-40 object-contain drop-shadow-lg animate-in fade-in zoom-in duration-500"
+              />
+              {/* Decorative glow around logo */}
+              <div className="absolute inset-0 rounded-full animate-glow-pulse opacity-50" />
+            </div>
+            
+            <h1 className="text-3xl font-bold text-center bg-gradient-to-r from-primary via-accent to-secondary bg-clip-text text-transparent">
+              🎄 مرحباً بك في متجر زهرة 🎅
             </h1>
-            <p className="text-muted-foreground text-center">أفضل ملابس الأطفال بجودة عالية</p>
+            <p className="text-muted-foreground text-center flex items-center gap-2">
+              <Gift className="w-5 h-5 text-primary" />
+              أفضل ملابس الأطفال بجودة عالية
+              <Gift className="w-5 h-5 text-secondary" />
+            </p>
             
             {/* Social Media Icons */}
             <div className="flex items-center gap-3 mt-2">
@@ -147,7 +186,10 @@ const Home = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 space-y-8">
+      <div className="container mx-auto px-4 space-y-8 relative z-10">
+        {/* Christmas Banner */}
+        <ChristmasBanner />
+
         {/* Search Bar with Voice/Image and Price Filter */}
         <SearchBar 
           onSearch={setSearchQuery}
@@ -157,7 +199,11 @@ const Home = () => {
         {/* Active Offers */}
         {offers && offers.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-2xl font-bold">العروض الحالية 🎉</h2>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Gift className="w-6 h-6 text-primary animate-swing" />
+              العروض الحالية 🎁
+              <TreePine className="w-6 h-6 text-secondary animate-swing" style={{ animationDelay: "0.3s" }} />
+            </h2>
             <div className="grid gap-4">
               {offers.map((offer) => (
                 <OfferBanner key={offer.id} offer={offer} />
@@ -169,7 +215,11 @@ const Home = () => {
         {/* Products Grid */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">المنتجات</h2>
+            <h2 className="text-2xl font-bold flex items-center gap-2">
+              <Star className="w-6 h-6 text-accent fill-current animate-twinkle" />
+              المنتجات
+              <Sparkles className="w-5 h-5 text-accent" />
+            </h2>
             {(searchQuery || maxPrice) && (
               <span className="text-sm text-muted-foreground">
                 {filteredProducts?.length} منتج
@@ -182,16 +232,29 @@ const Home = () => {
             ))}
           </div>
           {filteredProducts?.length === 0 && (
-            <div className="text-center py-16 text-muted-foreground">
+            <div className="text-center py-16 text-muted-foreground flex flex-col items-center gap-2">
+              <TreePine className="w-12 h-12 text-secondary/30" />
               {searchQuery || maxPrice ? "لا توجد منتجات مطابقة" : "لا توجد منتجات حالياً"}
             </div>
           )}
         </div>
 
-        {/* About Us Section */}
-        <div className="bg-card rounded-2xl p-6 shadow-lg border border-border/50">
-          <h2 className="text-2xl font-bold mb-4 text-center">من نحن 🏭</h2>
-          <div className="text-muted-foreground leading-relaxed text-center space-y-4">
+        {/* About Us Section - Christmas themed */}
+        <div className="bg-card rounded-2xl p-6 shadow-lg border border-primary/20 relative overflow-hidden">
+          {/* Decorative corner elements */}
+          <div className="absolute top-2 right-2 text-secondary/20">
+            <TreePine className="w-16 h-16" />
+          </div>
+          <div className="absolute bottom-2 left-2 text-primary/20">
+            <Gift className="w-12 h-12" />
+          </div>
+          
+          <h2 className="text-2xl font-bold mb-4 text-center flex items-center justify-center gap-2">
+            <Star className="w-6 h-6 text-accent fill-current" />
+            من نحن 🎄
+            <Star className="w-6 h-6 text-accent fill-current" />
+          </h2>
+          <div className="text-muted-foreground leading-relaxed text-center space-y-4 relative z-10">
             <p>
               في <span className="text-primary font-bold">zahra.ink</span> بنقدملك تجربة تسوّق مختلفة تمامًا عن أي مكان تاني.
             </p>
@@ -205,24 +268,42 @@ const Home = () => {
               هدفنا إن كل عميل يقدر يشتري لبس أنيق بجودة ممتازة وسعر عادل.
             </p>
             <p className="text-foreground font-semibold">
-              اختيارك لينا معناه إنك بتتعامل مع مصدر موثوق بيقدّم القيمة الحقيقية للمنتج. ✨
+              🎁 اختيارك لينا معناه إنك بتتعامل مع مصدر موثوق بيقدّم القيمة الحقيقية للمنتج. ✨
             </p>
           </div>
         </div>
 
-        {/* Customer Service Section */}
-        <div className="bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 rounded-2xl p-6 shadow-lg border border-primary/20">
-          <h2 className="text-2xl font-bold mb-4 text-center">خدمة العملاء 💬</h2>
+        {/* Customer Service Section - Christmas themed */}
+        <div className="bg-gradient-to-r from-primary/20 via-accent/10 to-secondary/20 rounded-2xl p-6 shadow-lg border border-accent/30 relative overflow-hidden">
+          {/* Decorative lights */}
+          <div className="absolute top-0 left-0 right-0 flex justify-around">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full animate-twinkle -mt-1"
+                style={{
+                  backgroundColor: i % 2 === 0 ? "hsl(45, 90%, 50%)" : "hsl(0, 80%, 50%)",
+                  animationDelay: `${i * 0.2}s`,
+                }}
+              />
+            ))}
+          </div>
+          
+          <h2 className="text-2xl font-bold mb-4 text-center flex items-center justify-center gap-2">
+            <Gift className="w-6 h-6 text-primary animate-swing" />
+            خدمة العملاء 🎅
+            <TreePine className="w-6 h-6 text-secondary" />
+          </h2>
           <p className="text-muted-foreground text-center mb-4">للاستفسارات والمساعدة، تواصل معنا على واتساب:</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a 
               href="https://wa.me/201033050236" 
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 bg-card px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-105 border border-green-500/30 hover:border-green-500"
+              className="flex items-center gap-2 bg-card px-6 py-3 rounded-full shadow-md hover:shadow-lg transition-all hover:scale-105 border border-secondary/30 hover:border-secondary"
             >
-              <span className="text-lg font-bold text-primary">01033050236</span>
-              <svg className="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="currentColor">
+              <span className="text-lg font-bold text-secondary">01033050236</span>
+              <svg className="w-5 h-5 text-secondary" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
               </svg>
             </a>
