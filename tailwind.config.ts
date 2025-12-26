@@ -118,6 +118,50 @@ export default {
             opacity: "1",
           },
         },
+        "snowfall": {
+          "0%": {
+            transform: "translateY(-10vh) translateX(0) rotate(0deg)",
+            opacity: "1",
+          },
+          "100%": {
+            transform: "translateY(110vh) translateX(20px) rotate(360deg)",
+            opacity: "0.3",
+          },
+        },
+        "twinkle": {
+          "0%, 100%": {
+            opacity: "1",
+            transform: "scale(1)",
+          },
+          "50%": {
+            opacity: "0.5",
+            transform: "scale(0.8)",
+          },
+        },
+        "glow-pulse": {
+          "0%, 100%": {
+            boxShadow: "0 0 20px hsl(45 90% 50% / 0.4), 0 0 40px hsl(0 80% 45% / 0.2)",
+          },
+          "50%": {
+            boxShadow: "0 0 30px hsl(45 90% 50% / 0.6), 0 0 60px hsl(0 80% 45% / 0.3)",
+          },
+        },
+        "float": {
+          "0%, 100%": {
+            transform: "translateY(0px)",
+          },
+          "50%": {
+            transform: "translateY(-10px)",
+          },
+        },
+        "swing": {
+          "0%, 100%": {
+            transform: "rotate(-3deg)",
+          },
+          "50%": {
+            transform: "rotate(3deg)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -126,6 +170,11 @@ export default {
         "slide-in-from-top": "slide-in-from-top 0.4s ease-out",
         "slide-in-from-bottom": "slide-in-from-bottom 0.4s ease-out",
         "zoom-in": "zoom-in 0.3s ease-out",
+        "snowfall": "snowfall 10s linear infinite",
+        "twinkle": "twinkle 2s ease-in-out infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "float": "float 3s ease-in-out infinite",
+        "swing": "swing 2s ease-in-out infinite",
       },
     },
   },
