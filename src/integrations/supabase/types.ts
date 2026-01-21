@@ -14,6 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          section: string
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          section: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          section?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_user_permissions: {
+        Row: {
+          created_at: string | null
+          id: string
+          permission: string
+          permission_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          permission: string
+          permission_type?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          permission?: string
+          permission_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      admin_users: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          password: string
+          updated_at: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          password: string
+          updated_at?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          password?: string
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
+      agent_daily_closings: {
+        Row: {
+          closed_by: string | null
+          closed_by_username: string | null
+          closing_date: string
+          created_at: string | null
+          delivery_agent_id: string
+          id: string
+          net_amount: number
+          notes: string | null
+        }
+        Insert: {
+          closed_by?: string | null
+          closed_by_username?: string | null
+          closing_date: string
+          created_at?: string | null
+          delivery_agent_id: string
+          id?: string
+          net_amount?: number
+          notes?: string | null
+        }
+        Update: {
+          closed_by?: string | null
+          closed_by_username?: string | null
+          closing_date?: string
+          created_at?: string | null
+          delivery_agent_id?: string
+          id?: string
+          net_amount?: number
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_daily_closings_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_daily_closings_delivery_agent_id_fkey"
+            columns: ["delivery_agent_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_payments: {
         Row: {
           amount: number
@@ -22,6 +167,7 @@ export type Database = {
           id: string
           notes: string | null
           order_id: string | null
+          payment_date: string | null
           payment_type: string
         }
         Insert: {
@@ -31,6 +177,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string | null
+          payment_date?: string | null
           payment_type?: string
         }
         Update: {
@@ -40,6 +187,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string | null
+          payment_date?: string | null
           payment_type?: string
         }
         Relationships: [
@@ -94,6 +242,102 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      cashbox: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          opening_balance: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          opening_balance?: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          opening_balance?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashbox_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cashbox_transactions: {
+        Row: {
+          amount: number
+          cashbox_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          order_id: string | null
+          reason: string
+          type: string
+          user_id: string | null
+          username: string | null
+        }
+        Insert: {
+          amount: number
+          cashbox_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          reason: string
+          type: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Update: {
+          amount?: number
+          cashbox_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          order_id?: string | null
+          reason?: string
+          type?: string
+          user_id?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cashbox_transactions_cashbox_id_fkey"
+            columns: ["cashbox_id"]
+            isOneToOne: false
+            referencedRelation: "cashbox"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashbox_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cashbox_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -308,6 +552,7 @@ export type Database = {
       orders: {
         Row: {
           agent_shipping_cost: number | null
+          assigned_at: string | null
           created_at: string | null
           customer_id: string | null
           delivery_agent_id: string | null
@@ -325,6 +570,7 @@ export type Database = {
         }
         Insert: {
           agent_shipping_cost?: number | null
+          assigned_at?: string | null
           created_at?: string | null
           customer_id?: string | null
           delivery_agent_id?: string | null
@@ -342,6 +588,7 @@ export type Database = {
         }
         Update: {
           agent_shipping_cost?: number | null
+          assigned_at?: string | null
           created_at?: string | null
           customer_id?: string | null
           delivery_agent_id?: string | null
@@ -646,14 +893,106 @@ export type Database = {
         }
         Relationships: []
       }
+      system_passwords: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          password: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id: string
+          password: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          password?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      treasury: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "treasury_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      delete_old_activity_logs: { Args: never; Returns: undefined }
+      log_failed_delete_attempt: {
+        Args: {
+          item_id: string
+          section_name: string
+          user_id_input?: string
+          username_input?: string
+        }
+        Returns: undefined
+      }
       reset_order_sequence: { Args: never; Returns: undefined }
+      verify_admin_password: {
+        Args: { input_password: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      admin_permission:
+        | "orders"
+        | "products"
+        | "categories"
+        | "customers"
+        | "agents"
+        | "agent_orders"
+        | "agent_payments"
+        | "governorates"
+        | "statistics"
+        | "invoices"
+        | "all_orders"
+        | "settings"
+        | "reset_data"
+        | "user_management"
+        | "cashbox"
       order_status:
         | "pending"
         | "processing"
@@ -664,6 +1003,7 @@ export type Database = {
         | "partially_returned"
         | "delivered_with_modification"
         | "return_no_shipping"
+        | "agent_deleted"
       payment_status: "pending" | "partial" | "paid"
     }
     CompositeTypes: {
@@ -792,6 +1132,23 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_permission: [
+        "orders",
+        "products",
+        "categories",
+        "customers",
+        "agents",
+        "agent_orders",
+        "agent_payments",
+        "governorates",
+        "statistics",
+        "invoices",
+        "all_orders",
+        "settings",
+        "reset_data",
+        "user_management",
+        "cashbox",
+      ],
       order_status: [
         "pending",
         "processing",
@@ -802,6 +1159,7 @@ export const Constants = {
         "partially_returned",
         "delivered_with_modification",
         "return_no_shipping",
+        "agent_deleted",
       ],
       payment_status: ["pending", "partial", "paid"],
     },
