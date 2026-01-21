@@ -144,7 +144,9 @@ const Cart = () => {
 
       return order;
     },
-    onSuccess: () => {
+    onSuccess: (order) => {
+      // إرسال رسالة واتساب مباشرة بعد نجاح الطلب
+      sendWhatsAppOrder(order.order_number);
       setShowThankYou(true);
       queryClient.invalidateQueries({ queryKey: ["products"] });
     },
@@ -154,7 +156,8 @@ const Cart = () => {
     },
   });
 
-  const handleThankYouComplete = () => {
+  // دالة إرسال رسالة واتساب
+  const sendWhatsAppOrder = (orderNumber: number | null) => {
     const itemsDetails = cart.map((item, index) => {
       let details = `${index + 1}. *${item.name}*\n   • الكمية: ${item.quantity}`;
       if (item.selectedColors && item.selectedColors.length > 0) {
@@ -172,7 +175,7 @@ const Cart = () => {
 ═══════════════════════
 🛍️ *طلب جديد من متجر زهرة* 🛍️
 ═══════════════════════
-
+${orderNumber ? `\n🔢 *رقم الطلب: #${orderNumber}*\n` : ''}
 👤 *معلومات العميل:*
 ━━━━━━━━━━━━━━━━━━
 📛 الاسم: ${customerName}
@@ -197,7 +200,9 @@ ${notes ? `📝 *ملاحظات العميل:*\n${notes}\n` : ''}
 
     const whatsappUrl = `https://wa.me/201033050236?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
+  };
 
+  const handleThankYouComplete = () => {
     // Clear wheel discount after use
     if (appliedWheelDiscount > 0) {
       localStorage.removeItem('wheelDiscount');
