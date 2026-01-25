@@ -36,9 +36,25 @@ export default function ProductDetail() {
     },
   });
 
-  const handleShare = () => {
-    navigator.clipboard.writeText(window.location.href);
-    toast.success('تم نسخ رابط المنتج!');
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/product/${id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: product?.name_ar || product?.name || 'منتج',
+          text: product?.description_ar || product?.description || '',
+          url: shareUrl,
+        });
+      } catch (err) {
+        // User cancelled or share failed, fallback to clipboard
+        navigator.clipboard.writeText(shareUrl);
+        toast.success('تم نسخ رابط المنتج!');
+      }
+    } else {
+      navigator.clipboard.writeText(shareUrl);
+      toast.success('تم نسخ رابط المنتج!');
+    }
   };
 
   if (isLoading) {
