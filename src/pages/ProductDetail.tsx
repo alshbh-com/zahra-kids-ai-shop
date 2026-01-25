@@ -121,7 +121,7 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {product.stock_quantity > 0 ? (
+            {(product.stock || 0) > 0 ? (
               <div className="flex gap-3">
                 <Button
                   className="flex-1"
@@ -140,9 +140,9 @@ export default function ProductDetail() {
               </Badge>
             )}
 
-            {product.stock_quantity <= product.low_stock_threshold && product.stock_quantity > 0 && (
+            {(product.stock || 0) <= (product.low_stock_threshold || 5) && (product.stock || 0) > 0 && (
               <Badge variant="outline">
-                الكمية محدودة! متبقي {product.stock_quantity} قطعة فقط
+                الكمية محدودة! متبقي {product.stock} قطعة فقط
               </Badge>
             )}
           </div>
